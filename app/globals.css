@@ -58,6 +58,13 @@ body {
   overflow-x: hidden;
   max-width: 1200px;
   margin: 0px auto;
+  padding-bottom: 80px;
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-bottom: 0;
+  }
 }
 
 @media (min-width: 768px) {
@@ -211,7 +218,7 @@ nav a:hover {
 }
 
 .hero-img {
-  background: url("https://images.unsplash.com/photo-1550547660-d9450f859349?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80")
+  background: url("https://images.unsplash.com/photo-1700649405390-574054e0d190?blend=000000&blend-alpha=10&blend-mode=normal&blend-w=1&crop=faces%2Cedges&h=630&mark=https:%2F%2Fimages.unsplash.com%2Fopengraph%2Flogo.png&mark-align=top%2Cleft&mark-pad=50&mark-w=64&w=1200&auto=format&fit=crop&q=60&ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzAwNjcxMjk3fA&ixlib=rb-4.0.3")
     center center / cover;
   position: relative;
   min-height: 300px;
@@ -506,41 +513,70 @@ nav a:hover {
 
 .social-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   border-bottom: var(--border);
 }
 
 @media (min-width: 768px) {
   .social-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
 .social-item {
   height: 200px;
   border-right: var(--border);
-  border-bottom: var(--border);
+  border-bottom: none;
   overflow: hidden;
   position: relative;
+  grid-column: span 2;
+}
+
+/* First 3 items: span 2 columns each (2+2+2 = 6 columns) */
+.social-item:nth-child(1),
+.social-item:nth-child(2),
+.social-item:nth-child(3) {
+  grid-column: span 2;
+}
+
+/* Last 2 items: centered by starting from column 2 and 5 */
+.social-item:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.social-item:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
+/* Remove border-right on items at the end of visual rows */
+.social-item:nth-child(3),
+.social-item:nth-child(5) {
+  border-right: none;
 }
 
 @media (min-width: 768px) {
   .social-item {
     height: 300px;
     border-bottom: none;
+    grid-column: span 1;
   }
-}
-
-.social-item:nth-child(2n) {
-  border-right: none;
-}
-
-@media (min-width: 768px) {
-  .social-item:nth-child(2n) {
+  
+  /* Desktop: Reset all to span 1 */
+  .social-item:nth-child(1),
+  .social-item:nth-child(2),
+  .social-item:nth-child(3),
+  .social-item:nth-child(4),
+  .social-item:nth-child(5) {
+    grid-column: span 1;
+  }
+  
+  /* Desktop: Reset border rules */
+  .social-item:nth-child(3) {
     border-right: var(--border);
   }
-
-  .social-item:last-child {
+  
+  /* Desktop: Remove border-right only on last item (5th) */
+  .social-item:nth-child(5) {
     border-right: none;
   }
 }
