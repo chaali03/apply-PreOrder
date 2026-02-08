@@ -1,0 +1,340 @@
+.login-container {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background-color: #FDF9F0;
+}
+
+.login-content {
+  width: 100%;
+  max-width: 48rem;
+  padding: 3rem;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.login-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.login-subtitle {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+.login-form {
+  margin-top: 2rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  font-size: 1.25rem;
+  color: #111827;
+  background-color: #FDF9F0;
+  border: 2px solid #d1d5db;
+  border-radius: 0.75rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.login-button {
+  width: 100%;
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  background-color: #bff000;
+  border: 3px solid #1a1a1a;
+  box-shadow: 4px 4px 0px #1a1a1a;
+  border-radius: 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.login-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #1a1a1a;
+}
+
+.login-button:focus {
+  outline: none;
+}
+
+/* Code Step Styles */
+.back-button-top {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  background-color: transparent;
+  border: 2px solid #111827;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.back-button-top svg {
+  transition: transform 0.2s;
+}
+
+.back-button-top:hover {
+  background-color: rgba(17, 24, 39, 0.05);
+}
+
+.back-button-top:hover svg {
+  transform: translateX(-3px);
+}
+
+.code-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.code-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  margin-bottom: 1rem;
+}
+
+.code-subtitle {
+  font-size: 1.5rem;
+  color: #6b7280;
+}
+
+.code-subtitle strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.code-input-container {
+  margin: 3rem 0;
+}
+
+.code-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2rem 2.5rem;
+  border: 2px solid #d1d5db;
+  border-radius: 9999px;
+  background-color: #FDF9F0;
+}
+
+.code-input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.code-input {
+  width: 3rem;
+  height: 3rem;
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #111827;
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: transparent;
+}
+
+.code-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.75rem;
+  color: #111827;
+  pointer-events: none;
+}
+
+.code-divider {
+  font-size: 1.75rem;
+  color: rgba(17, 24, 39, 0.2);
+  margin: 0 0.25rem;
+}
+
+.resend-container {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.resend-button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.resend-button:hover {
+  color: #111827;
+}
+
+.code-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.back-button {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  background-color: white;
+  border: 2px solid #111827;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.back-button svg {
+  transition: transform 0.2s;
+}
+
+.back-button:hover {
+  background-color: #f3f4f6;
+}
+
+.back-button:hover svg {
+  transform: translateX(-3px);
+}
+
+.continue-button {
+  flex: 1;
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  background-color: #1f2937;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  cursor: not-allowed;
+  transition: all 0.3s;
+}
+
+.continue-button.active {
+  color: white;
+  background-color: #FA5209;
+  border-color: #FA5209;
+  cursor: pointer;
+}
+
+.continue-button.active:hover {
+  background-color: #e04808;
+  border-color: #e04808;
+}
+
+/* Success Step Styles */
+.success-container {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.success-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.success-title {
+  font-size: 4rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.success-subtitle {
+  font-size: 1.75rem;
+  color: #6b7280;
+  margin-top: -1rem;
+}
+
+.success-icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon svg {
+  color: #111827;
+}
+
+.dashboard-button {
+  width: 100%;
+  max-width: 500px;
+  padding: 1.25rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  background-color: white;
+  border: 2px solid #111827;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1rem;
+}
+
+.dashboard-button:hover {
+  background-color: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

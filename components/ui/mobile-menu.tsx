@@ -3,6 +3,7 @@ import React, {useState, useEffect} from "react";
 
 import {motion, AnimatePresence} from "framer-motion";
 import Link from "next/link";
+import "./mobile-menu.css";
 
 interface iNavItem {
 	heading: string;
@@ -29,25 +30,25 @@ const defaultNavItems: iNavItem[] = [
 	{
 		heading: "Home",
 		href: "/",
-		subheading: "Welcome to our website",
+		subheading: "Selamat Datang ",
 		imgSrc: "/images/home.jpg",
 	},
 	{
-		heading: "Menu Check",
+		heading: "Menu",
 		href: "/menu",
-		subheading: "View our menu",
+		subheading: "Lihat Menu",
 		imgSrc: "/images/menu.jpg",
 	},
 	{
 		heading: "Kurir",
 		href: "/kurir",
-		subheading: "Delivery service",
+		subheading: "Pelayanan Pengantar",
 		imgSrc: "/images/delivery.jpg",
 	},
 	{
 		heading: "Locations",
 		href: "/locations",
-		subheading: "Find our stores",
+		subheading: "Temukan Toko",
 		imgSrc: "/images/locations.jpg",
 	},
 ];
@@ -87,19 +88,19 @@ const NavLink: React.FC<iNavLinkProps> = ({
 	return (
 		<div
 			onClick={handleClick}
-			className="group relative flex flex-col border-b border-black/10 py-5 cursor-pointer mb-2"
+			className="nav-link-item"
 		>
 			<Link href={href}>
-				<div className="relative flex items-start">
-					<span className="text-black text-2xl font-thin mr-4 md:text-3xl">
+				<div className="nav-link-content">
+					<span className="nav-link-index">
 						{index}.
 					</span>
-					<div className="flex flex-col gap-1">
-						<span className="text-2xl font-medium text-black md:text-3xl uppercase">
+					<div className="nav-link-text">
+						<span className="nav-link-heading">
 							{heading}
 						</span>
 						{subheading && (
-							<p className="text-sm font-normal text-gray-500 mt-1 normal-case">
+							<p className="nav-link-subheading">
 								{subheading}
 							</p>
 						)}
@@ -121,19 +122,19 @@ const CurvedNavbar: React.FC<iCurvedNavbarProps> = ({setIsActive, navItems}) => 
 			initial="initial"
 			animate="enter"
 			exit="exit"
-			className="fixed inset-0 z-40 bg-white"
+			className="mobile-menu-container"
 		>
-			<div className="h-full flex flex-col">
+			<div className="mobile-menu-wrapper">
 				{/* Header Menu */}
-				<div className="px-8 pt-16 pb-4">
-					<div className="text-black border-b border-black/10 pb-2">
-						<p className="text-xl font-bold tracking-wider">SCAFF*FOOD MENU</p>
+				<div className="mobile-menu-header">
+					<div className="mobile-menu-title-wrapper">
+						<p className="mobile-menu-title">SCAFF*FOOD MENU</p>
 					</div>
 				</div>
 				
 				{/* Navigation Items */}
-				<section className="flex-1 overflow-y-auto px-8">
-					<div className="space-y-1">
+				<section className="mobile-menu-nav">
+					<div className="mobile-menu-nav-list">
 						{navItems.map((item, index) => {
 							return (
 								<NavLink
@@ -147,13 +148,15 @@ const CurvedNavbar: React.FC<iCurvedNavbarProps> = ({setIsActive, navItems}) => 
 					</div>
 					
 					{/* Login Admin Button - Right after Locations */}
-					<div className="mt-12 pt-4">
-						<button
-							className="btn-cta"
-							onClick={() => setIsActive(false)}
-						>
-							LOGIN ADMIN
-						</button>
+					<div className="mobile-menu-login">
+						<Link href="/login">
+							<button
+								className="mobile-menu-login-btn"
+								onClick={() => setIsActive(false)}
+							>
+								LOGIN ADMIN
+							</button>
+						</Link>
 					</div>
 				</section>
 			</div>
@@ -173,26 +176,26 @@ const Header: React.FC<iHeaderProps> = ({
 	return (
 		<>
 			{/* Hamburger Menu Button - Mobile Only */}
-			<div className="relative z-50 md:hidden">
+			<div className="hamburger-wrapper">
 				<button
 					onClick={handleClick}
-					className="fixed right-5 top-5 z-50 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer bg-black hover:bg-gray-800 transition-colors"
+					className="hamburger-button"
 					aria-label={isActive ? "Close menu" : "Open menu"}
 				>
-					<div className="relative w-6 h-5 flex flex-col justify-center items-center">
+					<div className="hamburger-icon">
 						<span
-							className={`absolute block h-0.5 w-6 bg-white rounded-full transition-all duration-300 ease-out ${
-								isActive ? "rotate-45 top-1/2 -translate-y-1/2" : "top-0"
+							className={`hamburger-line ${
+								isActive ? "hamburger-line-top-active" : "hamburger-line-top"
 							}`}
 						></span>
 						<span
-							className={`absolute block h-0.5 bg-white rounded-full transition-all duration-300 ease-out top-1/2 -translate-y-1/2 ${
-								isActive ? "w-0 opacity-0" : "w-6 opacity-100"
+							className={`hamburger-line hamburger-line-middle ${
+								isActive ? "hamburger-line-middle-active" : ""
 							}`}
 						></span>
 						<span
-							className={`absolute block h-0.5 w-6 bg-white rounded-full transition-all duration-300 ease-out ${
-								isActive ? "-rotate-45 top-1/2 -translate-y-1/2" : "bottom-0"
+							className={`hamburger-line ${
+								isActive ? "hamburger-line-bottom-active" : "hamburger-line-bottom"
 							}`}
 						></span>
 					</div>

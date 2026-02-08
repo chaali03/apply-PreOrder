@@ -1,5 +1,6 @@
 import CurvedMenu from '../components/ui/curved-menu'
 import MobileMenu from '../components/ui/mobile-menu'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -14,7 +15,12 @@ export default function Home() {
           <a href="#">Kurir</a>
           <a href="#">Locations</a>
         </nav>
-        <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>Login Admin</button>
+        
+        <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
+          <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+            Login Admin
+          </Link>
+        </button>
         <MobileMenu />
       </header>
 
@@ -24,7 +30,9 @@ export default function Home() {
             <h1 className="hero-title">
               FOKUS RASA,
               <br />
-              ENAK<span>TITIK</span>
+              ENAK,
+              <br className="md:hidden" />
+              <span>TITIK</span>
             </h1>
             <p className="text-base md:text-lg lg:text-xl mb-8 md:mb-12 leading-relaxed text-[#555]">
             Setiap menu disiapkan dengan bahan berkualitas dan perhatian pada detail, untuk menghadirkan rasa yang bisa dinikmati kapan saja.
@@ -136,8 +144,8 @@ export default function Home() {
         </section>
 
         <section className="section-padding">
-          <h2 className="section-title text-lg md:text-5xl lg:text-6xl text-left md:text-center pl-5 md:pl-0" style={{ marginBottom: "40px" }}>
-            @MY.KERKOM.GW
+          <h2 className="section-title text-base md:text-5xl lg:text-6xl text-left md:text-center pl-5 md:pl-0" style={{ marginBottom: "40px" }}>
+            @MY.KELOMPOK.
           </h2>
           <div className="social-grid">
             <div className="social-item">
