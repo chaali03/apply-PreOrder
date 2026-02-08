@@ -138,16 +138,20 @@ export default function MenuPage() {
                 <span className="product-tag" style={{ background: product.tagColor }}>
                   {product.tag}
                 </span>
-                <img src={product.image} alt={product.name} className="product-image" />
+                <Link href={`/menu/${product.id}`}>
+                  <img src={product.image} alt={product.name} className="product-image" />
+                </Link>
                 <div className="product-body">
                   <div className="product-header">
                     <h3 className="product-name">{product.name}</h3>
                     <span className="product-price">Rp {product.price.toLocaleString()}</span>
                   </div>
                   <p className="product-description">{product.description}</p>
-                  <button className="product-order-btn">
-                    Order Sekarang
-                  </button>
+                  <Link href={`/menu/${product.id}`}>
+                    <button className="product-order-btn">
+                      Lihat Detail
+                    </button>
+                  </Link>
                 </div>
               </div>
             ))}
