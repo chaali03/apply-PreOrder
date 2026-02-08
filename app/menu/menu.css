@@ -218,12 +218,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  gap: 10px;
 }
 
 .product-name {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
+  flex: 1;
 }
 
 @media (min-width: 768px) {
@@ -237,6 +239,10 @@
   font-size: 20px;
   font-weight: 700;
   color: var(--secondary);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 @media (min-width: 768px) {
