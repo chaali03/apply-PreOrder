@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+yarn.lock
+
+# Build output
+dist
+build
+.out
+bin
+
+# Env & editor
+.env
+.vscode
+.idea
+
+# Uploads 
+uploads
+tmp
+
+# OS
+.DS_Store
+Thumbs.db
