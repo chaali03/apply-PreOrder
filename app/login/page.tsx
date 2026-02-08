@@ -10,10 +10,30 @@ export default function LoginPage() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      setStep("code");
+      try {
+        const response = await fetch('http://localhost:8080/api/auth/send-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('Code sent:', data.message);
+          setStep("code");
+        } else {
+          alert('Failed to send code: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error sending code:', error);
+        alert('Failed to connect to server. Please try again.');
+      }
     }
   };
 
@@ -50,10 +70,36 @@ export default function LoginPage() {
     setCode(["", "", "", "", "", ""]);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (code.every(d => d !== "")) {
-      console.log("Code submitted:", code.join(""));
-      setStep("success");
+      const codeString = code.join("");
+      
+      try {
+        const response = await fetch('http://localhost:8080/api/auth/verify-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            email,
+            code: codeString 
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('Login successful:', data.token);
+          // Store token in localStorage
+          localStorage.setItem('authToken', data.token);
+          setStep("success");
+        } else {
+          alert('Invalid code: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error verifying code:', error);
+        alert('Failed to verify code. Please try again.');
+      }
     }
   };
 
