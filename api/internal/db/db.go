@@ -16,7 +16,7 @@ func ConnectDb() {
 	// DOCKER ENVIRONMENT CONFIG
 	host := getEnv("DB_HOST", "postgres") 
 	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "app_user")
+	user := getEnv("DB_USER", "postgres")
 	password := getEnv("DB_PASSWORD", "docker123")
 	dbname := getEnv("DB_NAME", "management_preorder")
 	
