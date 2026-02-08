@@ -1,8 +1,116 @@
+"use client";
+
 import CurvedMenu from '../components/ui/curved-menu'
 import MobileMenu from '../components/ui/mobile-menu'
 import Link from 'next/link'
+import { useRef, useEffect, useCallback } from 'react'
 
 export default function Home() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const targetRef = useRef<HTMLButtonElement>(null);
+  const mousePosRef = useRef({ x: null as number | null, y: null as number | null });
+
+  const drawArrow = useCallback(() => {
+    if (!canvasRef.current || !targetRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const targetEl = targetRef.current;
+    const mouse = mousePosRef.current;
+
+    const x0 = mouse.x;
+    const y0 = mouse.y;
+
+    if (x0 === null || y0 === null) return;
+
+    const rect = targetEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const a = Math.atan2(cy - y0, cx - x0);
+    const x1 = cx - Math.cos(a) * (rect.width / 2 + 12);
+    const y1 = cy - Math.sin(a) * (rect.height / 2 + 12);
+
+    const midX = (x0 + x1) / 2;
+    const midY = (y0 + y1) / 2;
+    const offset = Math.min(200, Math.hypot(x1 - x0, y1 - y0) * 0.5);
+    const t = Math.max(-1, Math.min(1, (y0 - y1) / 200));
+    const controlX = midX;
+    const controlY = midY + offset * t;
+    
+    const r = Math.sqrt((x1 - x0)**2 + (y1 - y0)**2);
+    const opacity = Math.min(1.0, (r - Math.max(rect.width, rect.height) / 2) / 500);
+
+    ctx.strokeStyle = `rgba(26, 26, 26, ${opacity})`;
+    ctx.lineWidth = 2;
+
+    // Draw curve
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(controlX, controlY, x1, y1);
+    ctx.setLineDash([10, 5]);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw arrowhead
+    const angle = Math.atan2(y1 - controlY, x1 - controlX);
+    const headLength = 10 * (ctx.lineWidth / 1.5);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(
+      x1 - headLength * Math.cos(angle - Math.PI / 6),
+      y1 - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(
+      x1 - headLength * Math.cos(angle + Math.PI / 6),
+      y1 - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.stroke();
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !targetRef.current) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const updateCanvasSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
+
+    window.addEventListener("resize", updateCanvasSize);
+    window.addEventListener("mousemove", handleMouseMove);
+    updateCanvasSize();
+
+    let animationFrameId: number;
+    const animateLoop = () => {
+      if (ctx && canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawArrow();
+      }
+      animationFrameId = requestAnimationFrame(animateLoop);
+    };
+    
+    animateLoop();
+
+    return () => {
+      window.removeEventListener("resize", updateCanvasSize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [drawArrow]);
   return (
     <>
       <div className="grain-overlay" />
@@ -38,7 +146,11 @@ export default function Home() {
             Setiap menu disiapkan dengan bahan berkualitas dan perhatian pada detail, untuk menghadirkan rasa yang bisa dinikmati kapan saja.
             </p>
             <div className="flex flex-row gap-6 sm:gap-5" style={{ marginTop: "auto" }}>
-              <button className="btn-cta" style={{ background: "var(--primary)", color: "white" }}>
+              <button 
+                ref={targetRef}
+                className="btn-cta" 
+                style={{ background: "var(--primary)", color: "white" }}
+              >
                 Order Sekarang
               </button>
               <button className="btn-cta" style={{ background: "white" }}>
@@ -224,6 +336,9 @@ export default function Home() {
 
       {/* Mobile Curved Menu */}
       <CurvedMenu />
+
+      {/* Canvas for arrow animation */}
+      <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 9998 }}></canvas>
     </>
   )
 }
