@@ -51,6 +51,11 @@
   cursor: crosshair;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   font-family: "Space Grotesk", sans-serif;
   background-color: var(--bg);
@@ -59,6 +64,7 @@ body {
   max-width: 1200px;
   margin: 0px auto;
   padding-bottom: 80px;
+  position: relative;
 }
 
 @media (min-width: 768px) {

@@ -120,7 +120,7 @@ export default function Home() {
         <nav>
           <Link href="/">Home</Link>
           <Link href="/menu">Menu</Link>
-          <a href="#">Kurir</a>
+          <Link href="/kurir">Kurir</Link>
           <a href="#">Locations</a>
         </nav>
         

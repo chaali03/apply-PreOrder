@@ -75,7 +75,7 @@ export default function MenuPage() {
         <nav>
           <Link href="/">Home</Link>
           <Link href="/menu">Menu</Link>
-          <a href="#">Kurir</a>
+          <Link href="/kurir">Kurir</Link>
           <a href="#">Locations</a>
         </nav>
         <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
