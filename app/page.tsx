@@ -118,8 +118,8 @@ export default function Home() {
       <header className="header">
         <div className="logo">SCAFF*FOOD</div>
         <nav>
-          <a href="#">Home</a>
-          <a href="#">Menu</a>
+          <Link href="/">Home</Link>
+          <Link href="/menu">Menu</Link>
           <a href="#">Kurir</a>
           <a href="#">Locations</a>
         </nav>
@@ -153,9 +153,11 @@ export default function Home() {
               >
                 Order Sekarang
               </button>
-              <button className="btn-cta" style={{ background: "white" }}>
-                Lihat Menu
-              </button>
+              <Link href="/menu">
+                <button className="btn-cta" style={{ background: "white" }}>
+                  Lihat Menu
+                </button>
+              </Link>
             </div>
           </div>
           <div className="hero-img">
@@ -183,13 +185,13 @@ export default function Home() {
         <section className="section-padding">
           <div className="section-header">
             <h2 className="section-title">SCAFF MENU</h2>
-            <a
-              href="#"
+            <Link
+              href="/menu"
               className="text-sm md:text-base"
               style={{ color: "var(--dark)", fontWeight: 800, textTransform: "uppercase" }}
             >
               Lihat Semua Menu →
-            </a>
+            </Link>
           </div>
 
           <div className="menu-grid">
