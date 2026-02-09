@@ -25,14 +25,12 @@ export default function LoginPage() {
         const data = await response.json();
         
         if (data.success) {
-          console.log('Code sent:', data.message);
           setStep("code");
         } else {
-          alert('Failed to send code: ' + data.message);
+          alert(data.message || 'Email atau kode verifikasi salah. Silakan coba lagi.');
         }
       } catch (error) {
-        console.error('Error sending code:', error);
-        alert('Failed to connect to server. Please try again.');
+        alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
       }
     }
   };
@@ -89,16 +87,14 @@ export default function LoginPage() {
         const data = await response.json();
         
         if (data.success) {
-          console.log('Login successful:', data.token);
           // Store token in localStorage
           localStorage.setItem('authToken', data.token);
           setStep("success");
         } else {
-          alert('Invalid code: ' + data.message);
+          alert(data.message || 'Email atau kode verifikasi salah.');
         }
       } catch (error) {
-        console.error('Error verifying code:', error);
-        alert('Failed to verify code. Please try again.');
+        alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
       }
     }
   };
@@ -153,14 +149,14 @@ export default function LoginPage() {
                     type="email"
                     required
                     className="form-input"
-                    placeholder="Info@example.com"
+                    placeholder="your-email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
 
                 <button type="submit" className="login-button">
-                  Sign in
+                  Kirim Kode
                 </button>
               </form>
             </motion.div>

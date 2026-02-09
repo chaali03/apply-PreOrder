@@ -13,7 +13,23 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
+
+// Database connection
+var DB *gorm.DB
+
+// User model
+type User struct {
+	ID        string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Email     string    `gorm:"unique;not null" json:"email"`
+	Name      string    `json:"name"`
+	Phone     string    `json:"phone"`
+	Role      string    `gorm:"default:'customer'" json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
 
 type LoginRequest struct {
 	Email string `json:"email"`
@@ -72,6 +88,68 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func connectDatabase() {
+	host := getEnv("DB_HOST", "localhost")
+	port := getEnv("DB_PORT", "5432")
+	user := getEnv("DB_USER", "postgres")
+	password := getEnv("DB_PASSWORD", "change_me")
+	dbname := getEnv("DB_NAME", "management_preorder")
+
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		host, user, password, dbname, port,
+	)
+
+	log.Printf("🔌 Connecting to database: %s@%s:%s/%s", user, host, port, dbname)
+
+	var err error
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Printf("❌ Failed to connect to database: %v", err)
+		log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		log.Println("⚠️  DATABASE NOT CONNECTED!")
+		log.Println("⚠️  Login will be DISABLED until database is running")
+		log.Println("⚠️  Start database with: ./start-db.sh")
+		log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		return
+	}
+
+	// Test connection
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Printf("❌ Failed to get DB instance: %v", err)
+		DB = nil
+		return
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		log.Printf("❌ Database ping failed: %v", err)
+		DB = nil
+		return
+	}
+
+	log.Println("✅ Connected to PostgreSQL database!")
+	log.Println("✅ Login system is ready!")
+}
+
+func isEmailAllowed(email string) bool {
+	if DB == nil {
+		log.Println("❌ Database not connected, rejecting login")
+		return false
+	}
+
+	var user User
+	result := DB.Where("email = ?", email).First(&user)
+	
+	if result.Error != nil {
+		log.Printf("❌ Email %s not found in database", email)
+		return false
+	}
+
+	log.Printf("✅ Email %s found in database (role: %s)", email, user.Role)
+	return true
 }
 
 func sendEmail(to, code string) error {
@@ -259,6 +337,9 @@ func main() {
 		log.Println("✅ Loaded .env file")
 	}
 
+	// Connect to database
+	connectDatabase()
+
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		AppName: "SCAFF*FOOD API",
@@ -293,6 +374,20 @@ func main() {
 			return c.Status(400).JSON(Response{
 				Success: false,
 				Message: "Email is required",
+			})
+		}
+
+		// Check if email is allowed (exists in database)
+		if !isEmailAllowed(req.Email) {
+			if DB == nil {
+				return c.Status(503).JSON(Response{
+					Success: false,
+					Message: "Layanan sedang tidak tersedia. Silakan coba lagi nanti.",
+				})
+			}
+			return c.Status(401).JSON(Response{
+				Success: false,
+				Message: "Email atau kode verifikasi salah.",
 			})
 		}
 
@@ -347,7 +442,7 @@ func main() {
 		if !exists {
 			return c.Status(401).JSON(Response{
 				Success: false,
-				Message: "Kode verifikasi tidak ditemukan",
+				Message: "Email atau kode verifikasi salah.",
 			})
 		}
 
@@ -359,7 +454,7 @@ func main() {
 
 			return c.Status(401).JSON(Response{
 				Success: false,
-				Message: "Kode verifikasi telah kadaluarsa",
+				Message: "Kode verifikasi telah kadaluarsa. Silakan minta kode baru.",
 			})
 		}
 
@@ -367,7 +462,7 @@ func main() {
 		if codeData.Code != req.Code {
 			return c.Status(401).JSON(Response{
 				Success: false,
-				Message: "Kode verifikasi salah",
+				Message: "Email atau kode verifikasi salah.",
 			})
 		}
 
