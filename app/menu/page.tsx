@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MobileMenu from '../../components/ui/mobile-menu';
 import CurvedMenu from '../../components/ui/curved-menu';
+import { Spinner } from '../../components/ui/ios-spinner';
 import './menu.css';
 
 interface Product {
@@ -131,7 +132,10 @@ export default function MenuPage() {
         {/* Products Grid */}
         <section className="products-section">
           {loading ? (
-            <div className="loading">Loading products...</div>
+            <div className="loading">
+              <Spinner size="lg" />
+              <p>Loading products...</p>
+            </div>
           ) : (
             <div className="products-grid">
               {filteredProducts.map((product) => (

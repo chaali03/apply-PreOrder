@@ -566,7 +566,7 @@ nav a:hover {
     border-bottom: none;
     grid-column: span 1;
   }
-  
+
   /* Desktop: Reset all to span 1 */
   .social-item:nth-child(1),
   .social-item:nth-child(2),
@@ -575,12 +575,12 @@ nav a:hover {
   .social-item:nth-child(5) {
     grid-column: span 1;
   }
-  
+
   /* Desktop: Reset border rules */
   .social-item:nth-child(3) {
     border-right: var(--border);
   }
-  
+
   /* Desktop: Remove border-right only on last item (5th) */
   .social-item:nth-child(5) {
     border-right: none;
@@ -781,6 +781,18 @@ footer {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --animate-spinner-blade: spinner-blade 1s linear infinite;
+  @keyframes spinner-blade {
+  0% {
+    opacity: 0.85;
+    }
+  50% {
+    opacity: 0.25;
+    }
+  100% {
+    opacity: 0.25;
+    }
+  }
 }
 
 @layer base {

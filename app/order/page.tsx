@@ -1,23 +1,37 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './order.css';
 
 interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
   image: string;
+  category?: string;
 }
 
 export default function OrderPage() {
   const [step, setStep] = useState<"cart" | "checkout" | "payment" | "success">("cart");
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { id: 1, name: "Cookies", price: 5000, quantity: 2, image: "/produk/Cookies.jpeg" },
-    { id: 2, name: "Udang Keju 3pcs", price: 10000, quantity: 1, image: "/produk/UdangKeju.jpeg" },
-  ]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  
+  // Load order data from localStorage
+  useEffect(() => {
+    const orderDataStr = localStorage.getItem('orderData');
+    if (orderDataStr) {
+      const orderData = JSON.parse(orderDataStr);
+      setCartItems([{
+        id: orderData.product.id,
+        name: orderData.product.name,
+        price: orderData.product.price,
+        quantity: orderData.quantity,
+        image: orderData.product.image,
+        category: orderData.product.category
+      }]);
+    }
+  }, []);
   
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -28,14 +42,35 @@ export default function OrderPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer" | "qris">("cash");
 
-  const updateQuantity = (id: number, change: number) => {
+  const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
       items.map(item =>
         item.id === id
-          ? { ...item, quantity: Math.max(0, item.quantity + change) }
+          ? { ...item, quantity: Math.max(1, item.quantity + change) }
           : item
-      ).filter(item => item.quantity > 0)
+      )
     );
+    
+    // Update localStorage
+    const updatedItems = cartItems.map(item =>
+      item.id === id
+        ? { ...item, quantity: Math.max(1, item.quantity + change) }
+        : item
+    );
+    if (updatedItems.length > 0) {
+      const orderData = {
+        product: {
+          id: updatedItems[0].id,
+          name: updatedItems[0].name,
+          price: updatedItems[0].price,
+          image: updatedItems[0].image,
+          category: updatedItems[0].category,
+        },
+        quantity: updatedItems[0].quantity,
+        total: updatedItems[0].price * updatedItems[0].quantity
+      };
+      localStorage.setItem('orderData', JSON.stringify(orderData));
+    }
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);

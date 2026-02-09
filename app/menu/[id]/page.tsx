@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import MobileMenu from '../../../components/ui/mobile-menu';
 import CurvedMenu from '../../../components/ui/curved-menu';
+import { Spinner } from '../../../components/ui/ios-spinner';
 import './detail.css';
 
 interface Product {
@@ -25,6 +26,7 @@ interface Product {
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = params.id as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -65,9 +67,28 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <p>Loading product...</p>
-      </div>
+      <>
+        <div className="grain-overlay" />
+        <header className="header">
+          <div className="logo">SCAFF*FOOD</div>
+          <nav>
+            <Link href="/">Home</Link>
+            <Link href="/menu">Menu</Link>
+            <Link href="/kurir">Kurir</Link>
+            <Link href="/locations">Locations</Link>
+          </nav>
+          <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
+            <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+              Login Admin
+            </Link>
+          </button>
+          <MobileMenu />
+        </header>
+        <div className="loading-container">
+          <Spinner size="lg" />
+          <p>Loading product...</p>
+        </div>
+      </>
     );
   }
 
@@ -109,8 +130,15 @@ export default function ProductDetailPage() {
       </header>
 
       <main>
-        {/* Breadcrumb */}
+        {/* Back Button & Breadcrumb */}
         <div className="breadcrumb">
+          <button onClick={() => router.back()} className="back-button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Kembali
+          </button>
+          <span>/</span>
           <Link href="/menu">Menu</Link>
           <span>/</span>
           <span>{product.name}</span>
@@ -177,7 +205,26 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Order Button */}
-              <button className="detail-order-btn">
+              <button 
+                className="detail-order-btn"
+                onClick={() => {
+                  // Save order data to localStorage
+                  const orderData = {
+                    product: {
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.image_url_1,
+                      category: product.category,
+                    },
+                    quantity: quantity,
+                    total: totalPrice
+                  };
+                  localStorage.setItem('orderData', JSON.stringify(orderData));
+                  // Navigate to order page
+                  router.push('/order');
+                }}
+              >
                 Pesan Sekarang - Rp {totalPrice.toLocaleString()}
               </button>
 

@@ -12,7 +12,20 @@ export default function LoginPage() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  const [notification, setNotification] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Show notification function
+  const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
 
   useEffect(() => {
     router.prefetch('/dashboard');
@@ -35,10 +48,10 @@ export default function LoginPage() {
         if (data.success) {
           setStep("code");
         } else {
-          alert(data.message || 'Email atau kode verifikasi salah. Silakan coba lagi.');
+          showNotification(data.message || 'Email atau kode verifikasi salah. Silakan coba lagi.');
         }
       } catch (error) {
-        alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
+        showNotification('Gagal terhubung ke server. Silakan coba lagi nanti.');
       }
     }
   };
@@ -107,12 +120,12 @@ export default function LoginPage() {
         // Reset timer
         setResendTimer(60);
         setCanResend(false);
-        alert('Kode verifikasi baru telah dikirim ke email Anda.');
+        showNotification('Kode verifikasi baru telah dikirim ke email Anda.', 'success');
       } else {
-        alert(data.message || 'Gagal mengirim kode. Silakan coba lagi.');
+        showNotification(data.message || 'Gagal mengirim kode. Silakan coba lagi.');
       }
     } catch (error) {
-      alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
+      showNotification('Gagal terhubung ke server. Silakan coba lagi nanti.');
     }
   };
 
@@ -139,10 +152,10 @@ export default function LoginPage() {
           localStorage.setItem('authToken', data.token);
           setStep("success");
         } else {
-          alert(data.message || 'Email atau kode verifikasi salah.');
+          showNotification(data.message || 'Email atau kode verifikasi salah.');
         }
       } catch (error) {
-        alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
+        showNotification('Gagal terhubung ke server. Silakan coba lagi nanti.');
       }
     }
   };
@@ -153,6 +166,42 @@ export default function LoginPage() {
 
   return (
     <div className="login-container">
+      {/* Notification Popup */}
+      <AnimatePresence>
+        {notification.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className={`notification ${notification.type}`}
+          >
+            <div className="notification-icon">
+              {notification.type === 'success' ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              )}
+            </div>
+            <p className="notification-message">{notification.message}</p>
+            <button 
+              className="notification-close"
+              onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="login-content">
         <AnimatePresence mode="wait">
           {step === "email" && (
