@@ -5,27 +5,31 @@ services:
     image: postgres:15-alpine
     container_name: preorder-db
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-docker123}
+      POSTGRES_DB: ${DB_NAME:-management_preorder}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Mount SQL files ke dalam container
+      - ./api/internal/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./api/internal/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"] 
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
   adminer:
-    image: adminer
+    image: adminer:latest
     container_name: preorder-adminer
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   app:
@@ -38,16 +42,20 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      PORT: 3000
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-docker123}
+      DB_NAME: ${DB_NAME:-management_preorder}
+      PORT: "3000"
+      ENV: ${ENV:-development}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - .:/app
-      - go_modules:/go/pkg/mod 
+      # Mount folder uploads biar persist
+      - ./uploads:/app/uploads
+      # Mount source code untuk development hot-reload
+      - ./api:/app
+      - go_modules:/go/pkg/mod
     restart: unless-stopped
 
 volumes:

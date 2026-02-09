@@ -7,6 +7,7 @@ import (
 	"scaff-food-backend/internal/db"
 	"scaff-food-backend/internal/product"
 	"scaff-food-backend/internal/routes"
+	"scaff-food-backend/internal/seed" // Tambah import
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -27,6 +28,10 @@ func main() {
 		log.Fatal("Migration failed:", err)
 	}
 	log.Println("✅ Migrations completed!")
+	
+	// Run seed data
+	seed.Products(db.DB)
+	log.Println("✅ Seeding completed!")
 	
 	app := fiber.New(fiber.Config{
 		AppName: "Product API (Docker)",
