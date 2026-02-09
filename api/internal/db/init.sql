@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    desc TEXT,
+    "desc" TEXT,
     quantity INTEGER DEFAULT 0,
     price DECIMAL(10,2) DEFAULT 0.00,
     image_url TEXT,
@@ -30,7 +30,7 @@ CREATE TRIGGER update_products_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert initial data
-INSERT INTO products (name, desc, quantity, price, image_url) 
+INSERT INTO products (name, "desc", quantity, price, image_url) 
 VALUES 
     ('Dimsum Goreng', 'Dimsum Goreng Renyah', 30, 10000.00, '/uploads/products/dimsum.jpg'),
     ('Matcha Cookies', 'Cookies dengan rasa matcha authentic', 15, 5000.00, '/uploads/products/matcha-cookies.jpg'),
