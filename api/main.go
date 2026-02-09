@@ -31,6 +31,25 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Product model
+type Product struct {
+	ID               string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Name             string    `gorm:"not null" json:"name"`
+	ShortDescription string    `json:"short_description"`
+	Description      string    `json:"description"`
+	Price            float64   `gorm:"not null" json:"price"`
+	Category         string    `json:"category"`
+	Tag              string    `json:"tag"`
+	TagColor         string    `json:"tag_color"`
+	ImageURL1        string    `json:"image_url_1"`
+	ImageURL2        string    `json:"image_url_2"`
+	ImageURL3        string    `json:"image_url_3"`
+	Stock            int       `gorm:"default:0" json:"stock"`
+	IsAvailable      bool      `gorm:"default:true" json:"is_available"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
 type LoginRequest struct {
 	Email string `json:"email"`
 }
@@ -478,6 +497,57 @@ func main() {
 			Success: true,
 			Message: "Login successful",
 			Token:   token,
+		})
+	})
+
+	// Product endpoints
+	app.Get("/api/products", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var products []Product
+		result := DB.Where("is_available = ?", true).Find(&products)
+		
+		if result.Error != nil {
+			log.Printf("Error fetching products: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch products",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    products,
+		})
+	})
+
+	app.Get("/api/products/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var product Product
+		result := DB.Where("id = ? AND is_available = ?", id, true).First(&product)
+		
+		if result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Product not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    product,
 		})
 	})
 

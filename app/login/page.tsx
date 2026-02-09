@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [step, setStep] = useState<"email" | "code" | "success">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [canResend, setCanResend] = useState(false);
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -46,8 +48,23 @@ export default function LoginPage() {
       setTimeout(() => {
         codeInputRefs.current[0]?.focus();
       }, 500);
+      // Start countdown timer (60 seconds)
+      setResendTimer(60);
+      setCanResend(false);
     }
   }, [step]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => {
+        setResendTimer(resendTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (resendTimer === 0 && step === "code") {
+      setCanResend(true);
+    }
+  }, [resendTimer, step]);
 
   const handleCodeChange = (index: number, value: string) => {
     if (value.length <= 1) {
@@ -70,6 +87,33 @@ export default function LoginPage() {
   const handleBackClick = () => {
     setStep("email");
     setCode(["", "", "", "", "", ""]);
+  };
+
+  const handleResend = async () => {
+    if (!canResend) return;
+    
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/send-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reset timer
+        setResendTimer(60);
+        setCanResend(false);
+        alert('Kode verifikasi baru telah dikirim ke email Anda.');
+      } else {
+        alert(data.message || 'Gagal mengirim kode. Silakan coba lagi.');
+      }
+    } catch (error) {
+      alert('Gagal terhubung ke server. Silakan coba lagi nanti.');
+    }
   };
 
   const handleContinue = async () => {
@@ -208,8 +252,17 @@ export default function LoginPage() {
               </div>
 
               <div className="resend-container">
-                <button type="button" className="resend-button">
-                  Kirim Ulang
+                <button 
+                  type="button" 
+                  className="resend-button"
+                  onClick={handleResend}
+                  disabled={!canResend}
+                  style={{
+                    opacity: canResend ? 1 : 0.5,
+                    cursor: canResend ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  {canResend ? 'Kirim Ulang' : `Kirim Ulang (${resendTimer}s)`}
                 </button>
               </div>
 

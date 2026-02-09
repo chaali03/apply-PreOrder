@@ -7,46 +7,44 @@ import CurvedMenu from '../../components/ui/curved-menu';
 import './menu.css';
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
+  short_description: string;
   description: string;
-  image: string;
+  image_url_1: string;
+  image_url_2: string;
+  image_url_3: string;
   category: string;
   tag: string;
-  tagColor: string;
+  tag_color: string;
 }
-
-const products: Product[] = [
-  {
-    id: 1,
-    name: "Cookies",
-    price: 5000,
-    description: "Cookies panggang maksimal, cokelat lumer, resep rahasia khas kami, empuk dan wangi.",
-    image: "/produk/Cookies.jpeg",
-    category: "Snack",
-    tag: "Mantul",
-    tagColor: "var(--primary)"
-  },
-  {
-    id: 2,
-    name: "Udang Keju 3pcs",
-    price: 10000,
-    description: "Udang keju dengan isian daging ayam dan udang, dibalut adonan renyah dan keju lumer.",
-    image: "/produk/UdangKeju.jpeg",
-    category: "Main Course",
-    tag: "Wenak",
-    tagColor: "var(--secondary)"
-  },
-  // Add more products as needed
-];
 
 export default function MenuPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const categories = ["All", "Snack", "Main Course", "Beverage", "Dessert"];
+
+  // Fetch products from API
+  useEffect(() => {
+    fetch('http://localhost:8080/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setProducts(data.data);
+          setFilteredProducts(data.data);
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching products:', error);
+        setLoading(false);
+      });
+  }, []);
 
   // Filter products
   useEffect(() => {
@@ -59,12 +57,12 @@ export default function MenuPage() {
     if (searchQuery) {
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase())
+        p.short_description.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     setFilteredProducts(filtered);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, products]);
 
   return (
     <>
@@ -132,32 +130,40 @@ export default function MenuPage() {
 
         {/* Products Grid */}
         <section className="products-section">
-          <div className="products-grid">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="product-card">
-                <span className="product-tag" style={{ background: product.tagColor }}>
-                  {product.tag}
-                </span>
-                <Link href={`/menu/${product.id}`}>
-                  <img src={product.image} alt={product.name} className="product-image" />
-                </Link>
-                <div className="product-body">
-                  <div className="product-header">
-                    <h3 className="product-name">{product.name}</h3>
-                    <span className="product-price">Rp {product.price.toLocaleString()}</span>
-                  </div>
-                  <p className="product-description">{product.description}</p>
+          {loading ? (
+            <div className="loading">Loading products...</div>
+          ) : (
+            <div className="products-grid">
+              {filteredProducts.map((product) => (
+                <div key={product.id} className="product-card">
+                  <span className="product-tag" style={{ background: product.tag_color }}>
+                    {product.tag}
+                  </span>
                   <Link href={`/menu/${product.id}`}>
-                    <button className="product-order-btn">
-                      Lihat Detail
-                    </button>
+                    <img 
+                      src={product.image_url_1 || '/produk/placeholder.svg'} 
+                      alt={product.name} 
+                      className="product-image" 
+                    />
                   </Link>
+                  <div className="product-body">
+                    <div className="product-header">
+                      <h3 className="product-name">{product.name}</h3>
+                      <span className="product-price">Rp {product.price.toLocaleString()}</span>
+                    </div>
+                    <p className="product-description">{product.short_description}</p>
+                    <Link href={`/menu/${product.id}`}>
+                      <button className="product-order-btn">
+                        Lihat Detail
+                      </button>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {filteredProducts.length === 0 && (
+          {!loading && filteredProducts.length === 0 && (
             <div className="no-results">
               <p>Tidak ada menu yang ditemukan</p>
             </div>

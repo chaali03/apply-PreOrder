@@ -19,10 +19,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    short_description TEXT,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     category VARCHAR(100),
-    image_url VARCHAR(500),
+    tag VARCHAR(50),
+    tag_color VARCHAR(50),
+    image_url_1 VARCHAR(500),
+    image_url_2 VARCHAR(500),
+    image_url_3 VARCHAR(500),
     stock INT DEFAULT 0,
     is_available BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -104,9 +109,12 @@ INSERT INTO locations (name, address, latitude, longitude, phone) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insert sample products
-INSERT INTO products (name, description, price, category, image_url, stock) VALUES
-('Cookies Original', 'Cookies renyah dengan rasa original yang lezat', 25000, 'Cookies', '/produk/Cookies.jpeg', 100),
-('Udang Keju', 'Snack udang dengan taburan keju premium', 30000, 'Snack', '/produk/UdangKeju.jpeg', 100)
+-- Delete any old products with wrong category first
+DELETE FROM products WHERE category = 'Cookies';
+
+INSERT INTO products (name, short_description, description, price, category, tag, tag_color, image_url_1, image_url_2, image_url_3, stock) VALUES
+('Cookies', 'Cookies renyah dengan cokelat lumer yang nikmat.', 'Cookies premium dengan cokelat chip Belgium yang lumer di mulut. Dibuat dengan resep rahasia keluarga menggunakan butter asli dan gula aren pilihan. Tekstur yang empuk di dalam namun renyah di luar, memberikan pengalaman makan yang sempurna. Cocok untuk teman ngopi atau camilan santai. Setiap gigitan memberikan sensasi manis yang pas dengan aroma vanilla yang khas.', 5000, 'Snack', 'Mantul', '#ff4d00', '/produk/Cookies.jpeg', '/produk/Cookies.jpeg', '/produk/Cookies.jpeg', 100),
+('Udang Keju 3pcs', 'Udang keju renyah dengan isian ayam dan keju lumer.', 'Perpaduan sempurna antara udang segar dan keju mozzarella yang lumer. Diisi dengan daging ayam cincang berkualitas dan udang pilihan, kemudian dibalut dengan tepung panir renyah. Setiap gigitan memberikan sensasi gurih keju yang creamy berpadu dengan tekstur renyah di luar. Disajikan dalam porsi 3 pieces yang pas untuk sharing atau makan sendiri. Cocok dinikmati selagi hangat dengan saus sambal atau mayones.', 10000, 'Main Course', 'Wenak', '#bff000', '/produk/UdangKeju.jpeg', '/produk/UdangKeju.jpeg', '/produk/UdangKeju.jpeg', 100)
 ON CONFLICT DO NOTHING;
 
 -- Function to update updated_at timestamp
