@@ -3,12 +3,18 @@
 import './login.css';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"email" | "code" | "success">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    router.prefetch('/dashboard');
+  }, [router]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +41,6 @@ export default function LoginPage() {
     }
   };
 
-  // Focus first input when code screen appears
   useEffect(() => {
     if (step === "code") {
       setTimeout(() => {
@@ -50,7 +55,6 @@ export default function LoginPage() {
       newCode[index] = value;
       setCode(newCode);
       
-      // Focus next input if value is entered
       if (value && index < 5) {
         codeInputRefs.current[index + 1]?.focus();
       }
@@ -99,6 +103,10 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoToDashboard = () => {
+    router.push('/dashboard');
+  };
+
   return (
     <div className="login-container">
       <div className="login-content">
@@ -113,7 +121,7 @@ export default function LoginPage() {
             >
               <button 
                 type="button" 
-                onClick={() => window.history.back()}
+                onClick={() => router.back()}
                 className="back-button-top"
               >
                 <svg 
@@ -274,7 +282,7 @@ export default function LoginPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6, duration: 0.4 }}
                   className="dashboard-button"
-                  onClick={() => window.location.href = '/dashboard'}
+                  onClick={handleGoToDashboard}
                 >
                   Lanjut Ke Dashboard
                 </motion.button>

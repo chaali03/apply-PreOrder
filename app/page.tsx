@@ -118,14 +118,14 @@ export default function Home() {
       <header className="header">
         <div className="logo">SCAFF*FOOD</div>
         <nav>
-          <Link href="/">Home</Link>
-          <Link href="/menu">Menu</Link>
-          <Link href="/kurir">Kurir</Link>
-          <Link href="/locations">Locations</Link>
+          <Link href="/" prefetch={true}>Home</Link>
+          <Link href="/menu" prefetch={true}>Menu</Link>
+          <Link href="/kurir" prefetch={true}>Kurir</Link>
+          <Link href="/locations" prefetch={true}>Locations</Link>
         </nav>
         
         <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
-          <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+          <Link href="/login" prefetch={true} style={{ textDecoration: "none", color: "inherit" }}>
             Login Admin
           </Link>
         </button>

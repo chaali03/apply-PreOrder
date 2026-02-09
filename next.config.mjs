@@ -6,6 +6,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    optimizePackageImports: ['framer-motion'],
+  },
+  // Enable faster navigation
+  reactStrictMode: true,
 }
 
 export default nextConfig
