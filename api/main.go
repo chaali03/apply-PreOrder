@@ -1,19 +1,18 @@
 package main
 
 import (
-	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"net/smtp"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv"
 )
 
 type LoginRequest struct {
@@ -38,7 +37,7 @@ type CodeData struct {
 
 type CodeStore struct {
 	mu    sync.RWMutex
-	codes map[string]*CodeData // email -> code data
+	codes map[string]*CodeData
 }
 
 var codeStore = &CodeStore{
@@ -78,23 +77,30 @@ func getEnv(key, defaultValue string) string {
 func sendEmail(to, code string) error {
 	config := getSMTPConfig()
 
+	log.Printf("SMTP Config - Host: %s, Port: %s, Username: %s", config.Host, config.Port, config.Username)
+
 	if config.Username == "" || config.Password == "" {
 		log.Printf("SMTP not configured. Code for %s: %s", to, code)
-		return nil
+		return fmt.Errorf("SMTP credentials not configured")
 	}
 
-	// Email template
+	log.Printf("Preparing email for %s with code %s", to, code)
+
+	// Email template with OTP form
 	subject := "Your SCAFF*FOOD Verification Code"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             background-color: #FDF9F0;
             margin: 0;
             padding: 20px;
+            line-height: 1.6;
         }
         .container {
             max-width: 600px;
@@ -102,79 +108,109 @@ func sendEmail(to, code string) error {
             background-color: white;
             border: 3px solid #000;
             box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
-            padding: 40px;
+        }
+        .header {
+            background-color: #bff000;
+            border-bottom: 3px solid #000;
+            padding: 30px;
+            text-align: center;
         }
         .logo {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 900;
             color: #000;
-            margin-bottom: 30px;
-            text-align: center;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .content {
+            padding: 40px 30px;
         }
         .title {
             font-size: 24px;
             font-weight: 800;
             color: #000;
-            margin-bottom: 20px;
+            margin: 0 0 20px 0;
             text-align: center;
-        }
-        .code-box {
-            background-color: #bff000;
-            border: 3px solid #000;
-            padding: 20px;
-            text-align: center;
-            margin: 30px 0;
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
-        }
-        .code {
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: 8px;
-            color: #000;
+            text-transform: uppercase;
         }
         .message {
             font-size: 16px;
             color: #666;
-            line-height: 1.6;
             text-align: center;
+            margin: 0 0 30px 0;
+        }
+        .code-display {
+            background-color: #bff000;
+            border: 3px solid #000;
+            padding: 20px;
             margin: 20px 0;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .code {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 12px;
+            color: #000;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+        }
+        .expiry-box {
+            background-color: #fff3cd;
+            border: 3px solid #000;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
         }
         .expiry {
             font-size: 14px;
             color: #ff4d00;
             font-weight: 700;
-            text-align: center;
-            margin-top: 20px;
+            margin: 0;
         }
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
+            background-color: #f8f9fa;
+            border-top: 3px solid #000;
+            padding: 30px;
             text-align: center;
-            color: #999;
+        }
+        .footer-text {
             font-size: 12px;
+            color: #999;
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">SCAFF*FOOD</div>
-        <div class="title">Kode Verifikasi Anda</div>
-        <div class="message">
-            Gunakan kode berikut untuk menyelesaikan proses login Anda:
+        <div class="header">
+            <h1 class="logo">SCAFF*FOOD</h1>
         </div>
-        <div class="code-box">
-            <div class="code">%s</div>
+        
+        <div class="content">
+            <h2 class="title">Kode Verifikasi Login</h2>
+            <p class="message">
+                Gunakan kode verifikasi di bawah ini untuk melanjutkan login:
+            </p>
+            
+            <div class="code-display">
+                <p class="code">%s</p>
+            </div>
+
+            <div class="expiry-box">
+                <p class="expiry">⏰ Kode ini akan kadaluarsa dalam 5 menit</p>
+            </div>
+
+            <p class="message">
+                Jika Anda tidak meminta kode ini, abaikan email ini.
+            </p>
         </div>
-        <div class="expiry">
-            ⏰ Kode ini akan kadaluarsa dalam 5 menit
-        </div>
-        <div class="message">
-            Jika Anda tidak meminta kode ini, abaikan email ini.
-        </div>
+
         <div class="footer">
-            © 2025 SCAFF*FOOD GROUP<br>
-            Email ini dikirim secara otomatis, mohon tidak membalas.
+            <p class="footer-text"><strong>© 2025 SCAFF*FOOD GROUP</strong></p>
+            <p class="footer-text">SMK Taruna Bhakti Depok</p>
+            <p class="footer-text">Email ini dikirim secara otomatis, mohon tidak membalas.</p>
         </div>
     </div>
 </body>
@@ -193,234 +229,165 @@ func sendEmail(to, code string) error {
 	// Setup authentication
 	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
 
-	// Connect to SMTP server with TLS
+	// Send email using simple method
 	addr := config.Host + ":" + config.Port
 
-	// Create TLS config
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-		ServerName:         config.Host,
+	log.Printf("Connecting to SMTP server: %s", addr)
+
+	err := smtp.SendMail(
+		addr,
+		auth,
+		config.From,
+		[]string{to},
+		[]byte(message),
+	)
+
+	if err != nil {
+		log.Printf("SMTP Error: %v", err)
+		return fmt.Errorf("failed to send email: %v", err)
 	}
 
-	// Connect to server
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
-	if err != nil {
-		// Try without TLS for port 587
-		client, err := smtp.Dial(addr)
-		if err != nil {
-			return fmt.Errorf("failed to connect to SMTP server: %v", err)
-		}
-		defer client.Close()
+	log.Printf("Email sent successfully to %s", to)
+	return nil
+}
 
-		// Start TLS
-		if err = client.StartTLS(tlsConfig); err != nil {
-			return fmt.Errorf("failed to start TLS: %v", err)
+func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️  No .env file found, using environment variables")
+	} else {
+		log.Println("✅ Loaded .env file")
+	}
+
+	// Create Fiber app
+	app := fiber.New(fiber.Config{
+		AppName: "SCAFF*FOOD API",
+	})
+
+	// Middleware
+	app.Use(logger.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:3000, http://localhost:3001",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+	}))
+
+	// Routes
+	app.Get("/api/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+			"time":   time.Now().Format(time.RFC3339),
+		})
+	})
+
+	app.Post("/api/auth/send-code", func(c *fiber.Ctx) error {
+		var req LoginRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(Response{
+				Success: false,
+				Message: "Invalid request",
+			})
 		}
 
-		// Authenticate
-		if err = client.Auth(auth); err != nil {
-			return fmt.Errorf("failed to authenticate: %v", err)
+		if req.Email == "" {
+			return c.Status(400).JSON(Response{
+				Success: false,
+				Message: "Email is required",
+			})
 		}
+
+		// Generate 6-digit code
+		code := generateCode()
+
+		// Store code with expiration (5 minutes)
+		codeStore.mu.Lock()
+		codeStore.codes[req.Email] = &CodeData{
+			Code:      code,
+			ExpiresAt: time.Now().Add(5 * time.Minute),
+		}
+		codeStore.mu.Unlock()
 
 		// Send email
-		if err = client.Mail(config.From); err != nil {
-			return fmt.Errorf("failed to set sender: %v", err)
+		smtpConfig := getSMTPConfig()
+		log.Printf("Attempting to send email to %s using SMTP %s:%s", req.Email, smtpConfig.Host, smtpConfig.Port)
+		if err := sendEmail(req.Email, code); err != nil {
+			log.Printf("ERROR: Failed to send email to %s: %v", req.Email, err)
+			log.Printf("Code for %s: %s (email failed, showing in logs)", req.Email, code)
+		} else {
+			log.Printf("SUCCESS: Verification code sent to %s", req.Email)
 		}
 
-		if err = client.Rcpt(to); err != nil {
-			return fmt.Errorf("failed to set recipient: %v", err)
-		}
-
-		w, err := client.Data()
-		if err != nil {
-			return fmt.Errorf("failed to get data writer: %v", err)
-		}
-
-		_, err = w.Write([]byte(message))
-		if err != nil {
-			return fmt.Errorf("failed to write message: %v", err)
-		}
-
-		err = w.Close()
-		if err != nil {
-			return fmt.Errorf("failed to close writer: %v", err)
-		}
-
-		return client.Quit()
-	}
-	defer conn.Close()
-
-	client, err := smtp.NewClient(conn, config.Host)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP client: %v", err)
-	}
-	defer client.Close()
-
-	if err = client.Auth(auth); err != nil {
-		return fmt.Errorf("failed to authenticate: %v", err)
-	}
-
-	if err = client.Mail(config.From); err != nil {
-		return fmt.Errorf("failed to set sender: %v", err)
-	}
-
-	if err = client.Rcpt(to); err != nil {
-		return fmt.Errorf("failed to set recipient: %v", err)
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get data writer: %v", err)
-	}
-
-	_, err = w.Write([]byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to write message: %v", err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close writer: %v", err)
-	}
-
-	return client.Quit()
-}
-
-func sendEmailHandler(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if req.Email == "" {
-		http.Error(w, "Email is required", http.StatusBadRequest)
-		return
-	}
-
-	// Generate 6-digit code
-	code := generateCode()
-
-	// Store code with expiration (5 minutes)
-	codeStore.mu.Lock()
-	codeStore.codes[req.Email] = &CodeData{
-		Code:      code,
-		ExpiresAt: time.Now().Add(5 * time.Minute),
-	}
-	codeStore.mu.Unlock()
-
-	// Send email
-	if err := sendEmail(req.Email, code); err != nil {
-		log.Printf("Failed to send email to %s: %v", req.Email, err)
-		log.Printf("Code for %s: %s (email failed, showing in logs)", req.Email, code)
-	} else {
-		log.Printf("Verification code sent to %s", req.Email)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Response{
-		Success: true,
-		Message: fmt.Sprintf("Kode verifikasi telah dikirim ke %s", req.Email),
-	})
-}
-
-func verifyCodeHandler(w http.ResponseWriter, r *http.Request) {
-	var req VerifyCodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if req.Email == "" || req.Code == "" {
-		http.Error(w, "Email and code are required", http.StatusBadRequest)
-		return
-	}
-
-	// Check code
-	codeStore.mu.RLock()
-	codeData, exists := codeStore.codes[req.Email]
-	codeStore.mu.RUnlock()
-
-	if !exists {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(Response{
-			Success: false,
-			Message: "Kode verifikasi tidak ditemukan",
+		return c.JSON(Response{
+			Success: true,
+			Message: fmt.Sprintf("Kode verifikasi telah dikirim ke %s", req.Email),
 		})
-		return
-	}
+	})
 
-	// Check if code expired
-	if time.Now().After(codeData.ExpiresAt) {
-		// Remove expired code
+	app.Post("/api/auth/verify-code", func(c *fiber.Ctx) error {
+		var req VerifyCodeRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(Response{
+				Success: false,
+				Message: "Invalid request",
+			})
+		}
+
+		if req.Email == "" || req.Code == "" {
+			return c.Status(400).JSON(Response{
+				Success: false,
+				Message: "Email and code are required",
+			})
+		}
+
+		// Check code
+		codeStore.mu.RLock()
+		codeData, exists := codeStore.codes[req.Email]
+		codeStore.mu.RUnlock()
+
+		if !exists {
+			return c.Status(401).JSON(Response{
+				Success: false,
+				Message: "Kode verifikasi tidak ditemukan",
+			})
+		}
+
+		// Check if code expired
+		if time.Now().After(codeData.ExpiresAt) {
+			codeStore.mu.Lock()
+			delete(codeStore.codes, req.Email)
+			codeStore.mu.Unlock()
+
+			return c.Status(401).JSON(Response{
+				Success: false,
+				Message: "Kode verifikasi telah kadaluarsa",
+			})
+		}
+
+		// Check if code matches
+		if codeData.Code != req.Code {
+			return c.Status(401).JSON(Response{
+				Success: false,
+				Message: "Kode verifikasi salah",
+			})
+		}
+
+		// Generate token
+		token := fmt.Sprintf("token_%s_%d", req.Email, time.Now().Unix())
+
+		// Remove used code
 		codeStore.mu.Lock()
 		delete(codeStore.codes, req.Email)
 		codeStore.mu.Unlock()
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(Response{
-			Success: false,
-			Message: "Kode verifikasi telah kadaluarsa",
+		return c.JSON(Response{
+			Success: true,
+			Message: "Login successful",
+			Token:   token,
 		})
-		return
-	}
-
-	// Check if code matches
-	if codeData.Code != req.Code {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(Response{
-			Success: false,
-			Message: "Kode verifikasi salah",
-		})
-		return
-	}
-
-	// Generate token (in production, use JWT)
-	token := fmt.Sprintf("token_%s_%d", req.Email, time.Now().Unix())
-
-	// Remove used code
-	codeStore.mu.Lock()
-	delete(codeStore.codes, req.Email)
-	codeStore.mu.Unlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Response{
-		Success: true,
-		Message: "Login successful",
-		Token:   token,
-	})
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ok",
-		"time":   time.Now().Format(time.RFC3339),
-	})
-}
-
-func main() {
-	r := mux.NewRouter()
-
-	// Routes
-	r.HandleFunc("/api/health", healthHandler).Methods("GET")
-	r.HandleFunc("/api/auth/send-code", sendEmailHandler).Methods("POST")
-	r.HandleFunc("/api/auth/verify-code", verifyCodeHandler).Methods("POST")
-
-	// CORS
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
 	})
 
-	handler := c.Handler(r)
-
-	port := ":8080"
-	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(port, handler))
+	// Start server
+	port := getEnv("PORT", "8080")
+	log.Printf("🚀 Server starting on http://localhost:%s", port)
+	log.Fatal(app.Listen(":" + port))
 }
