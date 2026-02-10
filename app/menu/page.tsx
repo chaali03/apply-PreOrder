@@ -19,6 +19,7 @@ interface Product {
   category: string;
   tag: string;
   tag_color: string;
+  is_available: boolean;
 }
 
 export default function MenuPage() {
@@ -32,10 +33,14 @@ export default function MenuPage() {
 
   // Fetch products from API
   useEffect(() => {
-    fetch('http://localhost:8080/api/products')
+    console.log('Fetching products from API...');
+    fetch('http://localhost:8080/api/admin/products')
       .then(res => res.json())
       .then(data => {
+        console.log('Products fetched:', data);
         if (data.success) {
+          console.log('Number of products:', data.data.length);
+          console.log('Products with is_available=false:', data.data.filter((p: Product) => !p.is_available).length);
           setProducts(data.data);
           setFilteredProducts(data.data);
         }
@@ -138,32 +143,48 @@ export default function MenuPage() {
             </div>
           ) : (
             <div className="products-grid">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="product-card">
-                  <span className="product-tag" style={{ background: product.tag_color }}>
-                    {product.tag}
-                  </span>
-                  <Link href={`/menu/${product.id}`}>
-                    <img 
-                      src={product.image_url_1 || '/produk/placeholder.svg'} 
-                      alt={product.name} 
-                      className="product-image" 
-                    />
-                  </Link>
-                  <div className="product-body">
-                    <div className="product-header">
-                      <h3 className="product-name">{product.name}</h3>
-                      <span className="product-price">Rp {product.price.toLocaleString()}</span>
+              {filteredProducts.map((product) => {
+                console.log(`Rendering product ${product.name}: is_available=${product.is_available}`);
+                return (
+                  <div key={product.id} className={`product-card ${!product.is_available ? 'product-sold-out' : ''}`}>
+                    <span className="product-tag" style={{ background: product.tag_color }}>
+                      {product.tag}
+                    </span>
+                    {product.is_available ? (
+                      <Link href={`/menu/${product.id}`}>
+                        <img src={product.image_url_1 || '/produk/placeholder.svg'} alt={product.name} className="product-image" />
+                      </Link>
+                    ) : (
+                      <div className="product-image-disabled">
+                        <img src={product.image_url_1 || '/produk/placeholder.svg'} alt={product.name} className="product-image" />
+                      </div>
+                    )}
+                    {!product.is_available && (
+                      <div className="sold-out-overlay">
+                        <div className="sold-out-watermark">HABIS</div>
+                      </div>
+                    )}
+                    <div className="product-body">
+                      <div className="product-header">
+                        <h3 className="product-name">{product.name}</h3>
+                        <span className="product-price">Rp {product.price.toLocaleString()}</span>
+                      </div>
+                      <p className="product-description">{product.short_description}</p>
+                      {product.is_available ? (
+                        <Link href={`/menu/${product.id}`}>
+                          <button className="product-order-btn">
+                            Lihat Detail
+                          </button>
+                        </Link>
+                      ) : (
+                        <button className="product-order-btn product-order-btn-disabled" disabled>
+                          Stok Habis
+                        </button>
+                      )}
                     </div>
-                    <p className="product-description">{product.short_description}</p>
-                    <Link href={`/menu/${product.id}`}>
-                      <button className="product-order-btn">
-                        Lihat Detail
-                      </button>
-                    </Link>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

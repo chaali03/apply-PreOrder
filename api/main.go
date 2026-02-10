@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"net/smtp"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -137,6 +139,26 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func isImageFile(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	validExts := []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}
+	for _, validExt := range validExts {
+		if ext == validExt {
+			return true
+		}
+	}
+	return false
+}
+
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }
 
 func connectDatabase() {
@@ -399,7 +421,7 @@ func main() {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "http://localhost:3000, http://localhost:3001",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
 	}))
 
 	// Routes
@@ -407,6 +429,60 @@ func main() {
 		return c.JSON(fiber.Map{
 			"status": "ok",
 			"time":   time.Now().Format(time.RFC3339),
+		})
+	})
+
+	// Upload image endpoint
+	app.Post("/api/upload", func(c *fiber.Ctx) error {
+		// Get file from form
+		file, err := c.FormFile("image")
+		if err != nil {
+			log.Printf("Error getting file: %v", err)
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "No file uploaded",
+			})
+		}
+
+		// Validate file type
+		if !isImageFile(file.Filename) {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "File must be an image (jpg, jpeg, png, gif, webp)",
+			})
+		}
+
+		// Validate file size (max 5MB)
+		if file.Size > 5*1024*1024 {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "File size must be less than 5MB",
+			})
+		}
+
+		// Generate unique filename
+		ext := filepath.Ext(file.Filename)
+		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), generateRandomString(8), ext)
+		
+		// Save to public/produk directory
+		uploadPath := filepath.Join("public", "produk", filename)
+		
+		if err := c.SaveFile(file, uploadPath); err != nil {
+			log.Printf("Error saving file: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to save file",
+			})
+		}
+
+		// Return URL
+		imageURL := fmt.Sprintf("/produk/%s", filename)
+		log.Printf("Image uploaded successfully: %s", imageURL)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"url":     imageURL,
+			"message": "Image uploaded successfully",
 		})
 	})
 
@@ -578,6 +654,217 @@ func main() {
 		return c.JSON(fiber.Map{
 			"success": true,
 			"data":    product,
+		})
+	})
+
+	// Admin: Get all products (including unavailable)
+	app.Get("/api/admin/products", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var products []Product
+		result := DB.Order("created_at DESC").Find(&products)
+		
+		if result.Error != nil {
+			log.Printf("Error fetching products: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch products",
+			})
+		}
+
+		// Log availability status
+		availableCount := 0
+		unavailableCount := 0
+		for _, p := range products {
+			if p.IsAvailable {
+				availableCount++
+			} else {
+				unavailableCount++
+			}
+		}
+		log.Printf("GET /api/admin/products: Returning %d products (available: %d, unavailable: %d)", 
+			len(products), availableCount, unavailableCount)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    products,
+		})
+	})
+
+	// Admin: Create product
+	app.Post("/api/admin/products", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var product Product
+		if err := c.BodyParser(&product); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		// Set default values
+		if product.Stock == 0 {
+			product.Stock = 100
+		}
+		if !product.IsAvailable {
+			product.IsAvailable = true
+		}
+
+		result := DB.Create(&product)
+		if result.Error != nil {
+			log.Printf("Error creating product: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create product",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    product,
+			"message": "Product created successfully",
+		})
+	})
+
+	// Admin: Update product
+	app.Put("/api/admin/products/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var product Product
+		
+		// Find existing product
+		if err := DB.First(&product, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Product not found",
+			})
+		}
+
+		// Parse update data
+		var updateData Product
+		if err := c.BodyParser(&updateData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		// Update fields
+		result := DB.Model(&product).Updates(updateData)
+		if result.Error != nil {
+			log.Printf("Error updating product: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update product",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    product,
+			"message": "Product updated successfully",
+		})
+	})
+
+	// Admin: Delete product
+	app.Delete("/api/admin/products/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		result := DB.Delete(&Product{}, "id = ?", id)
+		
+		if result.Error != nil {
+			log.Printf("Error deleting product: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to delete product",
+			})
+		}
+
+		if result.RowsAffected == 0 {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Product not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Product deleted successfully",
+		})
+	})
+
+	// Admin: Toggle product availability
+	app.Patch("/api/admin/products/:id/toggle", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var product Product
+		
+		if err := DB.First(&product, "id = ?", id).Error; err != nil {
+			log.Printf("Error finding product %s: %v", id, err)
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Product not found",
+			})
+		}
+
+		log.Printf("Toggling product %s (%s): is_available %v -> %v", id, product.Name, product.IsAvailable, !product.IsAvailable)
+
+		// Toggle availability
+		oldAvailability := product.IsAvailable
+		newAvailability := !product.IsAvailable
+		
+		// Use Updates with map to force update boolean field
+		result := DB.Model(&product).Updates(map[string]interface{}{
+			"is_available": newAvailability,
+		})
+		
+		if result.Error != nil {
+			log.Printf("Error updating product %s: %v", id, result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update product",
+			})
+		}
+
+		// Update local variable
+		product.IsAvailable = newAvailability
+
+		log.Printf("✅ Successfully toggled product %s: is_available changed from %v to %v (rows affected: %d)", 
+			product.Name, oldAvailability, product.IsAvailable, result.RowsAffected)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    product,
+			"message": "Product availability updated",
 		})
 	})
 

@@ -181,6 +181,11 @@
   transform: translate(-5px, -5px);
 }
 
+.product-sold-out:hover {
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+  transform: none;
+}
+
 .product-tag {
   position: absolute;
   top: 20px;
@@ -438,4 +443,96 @@
   100% {
     opacity: 0.25;
   }
+}
+
+/* Sold Out Product */
+.product-sold-out {
+  position: relative;
+  opacity: 0.85;
+}
+
+.product-sold-out .product-image {
+  filter: grayscale(100%) brightness(0.9);
+}
+
+.sold-out-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sold-out-watermark {
+  font-size: 64px;
+  font-weight: 900;
+  color: #FF3B30;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 28px 80px;
+  border: 10px solid #FF3B30;
+  transform: rotate(-15deg);
+  box-shadow: 
+    0 0 0 4px rgba(255, 59, 48, 0.3),
+    0 16px 40px rgba(255, 59, 48, 0.6), 
+    0 8px 16px rgba(0, 0, 0, 0.4);
+  letter-spacing: 14px;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(255, 59, 48, 0.5);
+  animation: pulse-watermark 2s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes pulse-watermark {
+  0%, 100% {
+    transform: rotate(-15deg) scale(1);
+    box-shadow: 
+      0 0 0 4px rgba(255, 59, 48, 0.3),
+      0 16px 40px rgba(255, 59, 48, 0.6), 
+      0 8px 16px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    transform: rotate(-15deg) scale(1.08);
+    box-shadow: 
+      0 0 0 6px rgba(255, 59, 48, 0.4),
+      0 20px 50px rgba(255, 59, 48, 0.7), 
+      0 10px 20px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (max-width: 768px) {
+  .sold-out-watermark {
+    font-size: 40px;
+    padding: 18px 50px;
+    border: 8px solid #FF3B30;
+    letter-spacing: 10px;
+  }
+}
+
+.product-image-disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.product-sold-out .product-tag {
+  z-index: 15;
+}
+
+.product-order-btn-disabled {
+  background: #999 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  color: #666 !important;
+  border-color: #666 !important;
+}
+
+.product-order-btn-disabled:hover {
+  transform: none !important;
+  box-shadow: 4px 4px 0px var(--dark) !important;
 }
