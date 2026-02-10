@@ -194,7 +194,11 @@ export default function OrderPage() {
                   <>
                     {cartItems.map(item => (
                       <div key={item.id} className="cart-item">
-                        <img src={item.image} alt={item.name} className="cart-item-image" />
+                        <img 
+                          src={item.image || '/produk/placeholder.svg'} 
+                          alt={item.name} 
+                          className="cart-item-image" 
+                        />
                         <div className="cart-item-info">
                           <h3 className="cart-item-name">{item.name}</h3>
                           <p className="cart-item-price">Rp {item.price.toLocaleString()}</p>

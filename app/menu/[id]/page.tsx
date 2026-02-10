@@ -246,23 +246,35 @@ export default function ProductDetailPage() {
           <h2 className="related-title">Menu Lainnya</h2>
           <div className="related-grid">
             {relatedProducts.map((relatedProduct) => (
-              <Link 
-                key={relatedProduct.id} 
-                href={`/menu/${relatedProduct.id}`}
-                className="related-card"
-              >
+              <div key={relatedProduct.id} className="related-card">
                 <img 
                   src={relatedProduct.image_url_1 || '/produk/placeholder.svg'} 
                   alt={relatedProduct.name} 
                 />
                 <div className="related-card-body">
-                  <h3>{relatedProduct.name}</h3>
-                  <p style={{ fontSize: '12px', color: '#666', margin: '8px 0' }}>
-                    {relatedProduct.short_description}
-                  </p>
-                  <span className="related-price">Rp {relatedProduct.price.toLocaleString()}</span>
+                  <div className="related-card-content">
+                    <div className="related-card-text">
+                      <h3>{relatedProduct.name}</h3>
+                      <p className="related-card-description">
+                        {relatedProduct.short_description}
+                      </p>
+                    </div>
+                    <div className="related-price-wrapper">
+                      <span className="related-price">
+                        Rp {relatedProduct.price.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="related-card-footer">
+                    <Link 
+                      href={`/menu/${relatedProduct.id}`}
+                      className="related-detail-btn"
+                    >
+                      Lihat Detail
+                    </Link>
+                  </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>

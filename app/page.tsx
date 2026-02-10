@@ -244,7 +244,7 @@ export default function Home() {
                     {product.tag}
                   </span>
                   <img
-                    src={product.image_url_1}
+                    src={product.image_url_1 || '/produk/placeholder.svg'}
                     alt={product.name}
                   />
                   <div className="menu-card-body">

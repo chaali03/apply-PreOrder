@@ -466,7 +466,7 @@ export default function DashboardMenuPage() {
                   )}
                   <div className="product-image-wrapper">
                     <img 
-                      src={product.image_url_1} 
+                      src={product.image_url_1 || '/produk/placeholder.svg'} 
                       alt={product.name}
                       className="product-image-admin"
                     />
@@ -818,7 +818,7 @@ export default function DashboardMenuPage() {
                 </p>
                 <div className="delete-product-info">
                   <img 
-                    src={productToDelete.image_url_1} 
+                    src={productToDelete.image_url_1 || '/produk/placeholder.svg'} 
                     alt={productToDelete.name}
                     className="delete-product-image"
                   />

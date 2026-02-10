@@ -152,11 +152,19 @@ export default function MenuPage() {
                     </span>
                     {product.is_available ? (
                       <Link href={`/menu/${product.id}`}>
-                        <img src={product.image_url_1} alt={product.name} className="product-image" />
+                        <img 
+                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          alt={product.name} 
+                          className="product-image" 
+                        />
                       </Link>
                     ) : (
                       <div className="product-image-disabled">
-                        <img src={product.image_url_1} alt={product.name} className="product-image" />
+                        <img 
+                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          alt={product.name} 
+                          className="product-image" 
+                        />
                       </div>
                     )}
                     {!product.is_available && (
