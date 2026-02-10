@@ -11,6 +11,7 @@ interface CartItem {
   quantity: number;
   image: string;
   category?: string;
+  min_order?: number;
 }
 
 export default function OrderPage() {
@@ -28,8 +29,23 @@ export default function OrderPage() {
         price: orderData.product.price,
         quantity: orderData.quantity,
         image: orderData.product.image,
-        category: orderData.product.category
+        category: orderData.product.category,
+        min_order: orderData.product.min_order || 1
       }]);
+    }
+
+    // Auto-fill customer info from localStorage
+    const savedPhone = localStorage.getItem('customerPhone');
+    const savedName = localStorage.getItem('customerName');
+    const savedAddress = localStorage.getItem('customerAddress');
+    
+    if (savedPhone || savedName || savedAddress) {
+      setCustomerInfo({
+        name: savedName || "",
+        phone: savedPhone || "",
+        address: savedAddress || "",
+        notes: ""
+      });
     }
   }, []);
   
@@ -48,19 +64,26 @@ export default function OrderPage() {
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
+      items.map(item => {
+        if (item.id === id) {
+          const minOrder = item.min_order || 1;
+          const newQuantity = Math.max(minOrder, item.quantity + change);
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
     );
     
     // Update localStorage
-    const updatedItems = cartItems.map(item =>
-      item.id === id
-        ? { ...item, quantity: Math.max(1, item.quantity + change) }
-        : item
-    );
+    const updatedItems = cartItems.map(item => {
+      if (item.id === id) {
+        const minOrder = item.min_order || 1;
+        const newQuantity = Math.max(minOrder, item.quantity + change);
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
+    });
+    
     if (updatedItems.length > 0) {
       const orderData = {
         product: {
@@ -69,6 +92,7 @@ export default function OrderPage() {
           price: updatedItems[0].price,
           image: updatedItems[0].image,
           category: updatedItems[0].category,
+          min_order: updatedItems[0].min_order
         },
         quantity: updatedItems[0].quantity,
         total: updatedItems[0].price * updatedItems[0].quantity
@@ -129,8 +153,15 @@ export default function OrderPage() {
 
       if (data.success) {
         setOrderNumber(data.data.order.order_number);
+        
+        // Save customer info to localStorage for next order
+        localStorage.setItem('customerPhone', customerInfo.phone);
+        localStorage.setItem('customerName', customerInfo.name);
+        localStorage.setItem('customerAddress', customerInfo.address);
+        
         // Clear cart
         localStorage.removeItem('orderData');
+        
         // Show success
         setStep("success");
       } else {
@@ -202,9 +233,24 @@ export default function OrderPage() {
                         <div className="cart-item-info">
                           <h3 className="cart-item-name">{item.name}</h3>
                           <p className="cart-item-price">Rp {item.price.toLocaleString()}</p>
+                          {item.min_order && item.min_order > 1 && (
+                            <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                              Min. order: {item.min_order} pcs
+                            </small>
+                          )}
                         </div>
                         <div className="cart-item-quantity">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="qty-btn">-</button>
+                          <button 
+                            onClick={() => updateQuantity(item.id, -1)} 
+                            className="qty-btn"
+                            disabled={item.quantity <= (item.min_order || 1)}
+                            style={{ 
+                              opacity: item.quantity <= (item.min_order || 1) ? 0.3 : 1,
+                              cursor: item.quantity <= (item.min_order || 1) ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            -
+                          </button>
                           <span className="qty-value">{item.quantity}</span>
                           <button onClick={() => updateQuantity(item.id, 1)} className="qty-btn">+</button>
                         </div>

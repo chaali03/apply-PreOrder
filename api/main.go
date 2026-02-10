@@ -55,20 +55,22 @@ type Product struct {
 
 // Order model
 type Order struct {
-	ID              string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	OrderNumber     string    `gorm:"unique;not null" json:"order_number"`
-	CustomerName    string    `gorm:"not null" json:"customer_name"`
-	CustomerEmail   string    `gorm:"not null" json:"customer_email"`
-	CustomerPhone   string    `gorm:"not null" json:"customer_phone"`
-	DeliveryAddress string    `json:"delivery_address"`
-	Subtotal        float64   `json:"subtotal"`
-	DeliveryFee     float64   `json:"delivery_fee"`
-	Total           float64   `json:"total"`
-	PaymentMethod   string    `json:"payment_method"`
-	PaymentStatus   string    `gorm:"default:'pending'" json:"payment_status"`
-	OrderStatus     string    `gorm:"default:'pending'" json:"order_status"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                 string     `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	OrderNumber        string     `gorm:"unique;not null" json:"order_number"`
+	CustomerName       string     `gorm:"not null" json:"customer_name"`
+	CustomerEmail      string     `gorm:"not null" json:"customer_email"`
+	CustomerPhone      string     `gorm:"not null" json:"customer_phone"`
+	DeliveryAddress    string     `json:"delivery_address"`
+	Subtotal           float64    `json:"subtotal"`
+	DeliveryFee        float64    `json:"delivery_fee"`
+	Total              float64    `json:"total"`
+	PaymentMethod      string     `json:"payment_method"`
+	PaymentStatus      string     `gorm:"default:'pending'" json:"payment_status"`
+	OrderStatus        string     `gorm:"default:'pending'" json:"order_status"`
+	CancellationReason string     `json:"cancellation_reason,omitempty"`
+	CancelledAt        *time.Time `json:"cancelled_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 // OrderItem model
@@ -1043,6 +1045,15 @@ func main() {
 			})
 		}
 
+		// Auto-delete cancelled orders older than 24 hours
+		twentyFourHoursAgo := time.Now().Add(-24 * time.Hour)
+		deleteResult := DB.Where("(order_status = ? OR order_status = ?) AND cancelled_at < ?", "dibatalkan", "cancelled", twentyFourHoursAgo).Delete(&Order{})
+		if deleteResult.Error != nil {
+			log.Printf("Error auto-deleting old cancelled orders: %v", deleteResult.Error)
+		} else if deleteResult.RowsAffected > 0 {
+			log.Printf("🗑️ Auto-deleted %d cancelled orders older than 24 hours", deleteResult.RowsAffected)
+		}
+
 		var orders []Order
 		result := DB.Order("created_at DESC").Find(&orders)
 		
@@ -1160,13 +1171,22 @@ func main() {
 
 		id := c.Params("id")
 		var requestData struct {
-			Status string `json:"status"`
+			Status             string `json:"status"`
+			CancellationReason string `json:"cancellation_reason,omitempty"`
 		}
 
 		if err := c.BodyParser(&requestData); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
 				"message": "Invalid request body",
+			})
+		}
+
+		// Validate cancellation reason if status is dibatalkan or cancelled
+		if (requestData.Status == "dibatalkan" || requestData.Status == "cancelled") && requestData.CancellationReason == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Alasan pembatalan harus diisi",
 			})
 		}
 
@@ -1180,9 +1200,18 @@ func main() {
 
 		// Update status
 		oldStatus := order.OrderStatus
-		result := DB.Model(&order).Updates(map[string]interface{}{
+		updateData := map[string]interface{}{
 			"order_status": requestData.Status,
-		})
+		}
+
+		// If status is dibatalkan or cancelled, add cancellation reason and timestamp
+		if requestData.Status == "dibatalkan" || requestData.Status == "cancelled" {
+			now := time.Now()
+			updateData["cancellation_reason"] = requestData.CancellationReason
+			updateData["cancelled_at"] = now
+		}
+
+		result := DB.Model(&order).Updates(updateData)
 
 		if result.Error != nil {
 			log.Printf("Error updating order status: %v", result.Error)
@@ -1193,6 +1222,11 @@ func main() {
 		}
 
 		order.OrderStatus = requestData.Status
+		if requestData.Status == "dibatalkan" || requestData.Status == "cancelled" {
+			order.CancellationReason = requestData.CancellationReason
+			now := time.Now()
+			order.CancelledAt = &now
+		}
 		log.Printf("✅ Order %s status updated: %s → %s", order.OrderNumber, oldStatus, requestData.Status)
 
 		return c.JSON(fiber.Map{

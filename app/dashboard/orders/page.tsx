@@ -27,6 +27,8 @@ interface Order {
   payment_method: string;
   payment_status: string;
   order_status: string;
+  cancellation_reason?: string;
+  cancelled_at?: string;
   created_at: string;
   items: OrderItem[];
 }
@@ -42,6 +44,9 @@ export default function DashboardOrdersPage() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
 
   useEffect(() => {
     fetchOrders();
@@ -74,6 +79,16 @@ export default function DashboardOrdersPage() {
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    // If status is cancelled/dibatalkan, show cancellation reason modal
+    if (newStatus === 'cancelled' || newStatus === 'dibatalkan') {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setOrderToCancel(order);
+        setShowCancelModal(true);
+      }
+      return;
+    }
+
     try {
       const response = await fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
         method: 'PUT',
@@ -94,6 +109,47 @@ export default function DashboardOrdersPage() {
       }
     } catch (error) {
       console.error('Error updating status:', error);
+      showNotif('Gagal terhubung ke server');
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!orderToCancel || !cancellationReason.trim()) {
+      showNotif('Alasan pembatalan harus diisi');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/orders/${orderToCancel.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: 'cancelled',
+          cancellation_reason: cancellationReason 
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        setOrders(orders.map(order => 
+          order.id === orderToCancel.id ? { 
+            ...order, 
+            order_status: 'cancelled',
+            cancellation_reason: cancellationReason,
+            cancelled_at: new Date().toISOString()
+          } : order
+        ));
+        showNotif(`Pesanan ${orderToCancel.order_number} dibatalkan`);
+        setShowCancelModal(false);
+        setOrderToCancel(null);
+        setCancellationReason('');
+      } else {
+        showNotif(data.message || 'Gagal membatalkan pesanan');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
       showNotif('Gagal terhubung ke server');
     }
   };
@@ -504,6 +560,103 @@ export default function DashboardOrdersPage() {
                   className="modal-btn-delete"
                 >
                   Ya, Hapus Pesanan
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cancel Order Modal */}
+      <AnimatePresence>
+        {showCancelModal && orderToCancel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay"
+            onClick={() => {
+              setShowCancelModal(false);
+              setCancellationReason('');
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="delete-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason('');
+                }}
+                className="modal-close-btn"
+              >
+                ×
+              </button>
+
+              <div className="modal-icon-warning">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+              </div>
+
+              <h2 className="modal-title">Batalkan Pesanan</h2>
+              <p className="modal-message">
+                Pesanan <strong>{orderToCancel.order_number}</strong> akan dibatalkan
+              </p>
+
+              <div className="modal-order-info">
+                <p><strong>Customer:</strong> {orderToCancel.customer_name}</p>
+                <p><strong>Total:</strong> Rp {orderToCancel.total.toLocaleString()}</p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                  Alasan Pembatalan *
+                </label>
+                <textarea
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="Contoh: Stok habis, Customer request, dll..."
+                  style={{
+                    width: '100%',
+                    minHeight: '100px',
+                    padding: '12px',
+                    border: '2px solid #1a1a1a',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                  required
+                />
+              </div>
+
+              <p className="modal-warning">
+                Alasan akan ditampilkan ke customer dan pesanan akan otomatis terhapus setelah 24 jam
+              </p>
+
+              <div className="modal-actions">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancellationReason('');
+                  }}
+                  className="modal-btn-cancel"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleCancelOrder}
+                  className="modal-btn-delete"
+                  disabled={!cancellationReason.trim()}
+                  style={{ opacity: cancellationReason.trim() ? 1 : 0.5 }}
+                >
+                  Ya, Batalkan Pesanan
                 </button>
               </div>
             </motion.div>

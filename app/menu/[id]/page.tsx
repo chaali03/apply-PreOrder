@@ -235,6 +235,7 @@ export default function ProductDetailPage() {
                       price: product.price,
                       image: product.image_url_1,
                       category: product.category,
+                      min_order: product.min_order || 1
                     },
                     quantity: quantity,
                     total: totalPrice
