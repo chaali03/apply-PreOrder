@@ -67,6 +67,7 @@ type Order struct {
 	PaymentMethod      string     `json:"payment_method"`
 	PaymentStatus      string     `gorm:"default:'pending'" json:"payment_status"`
 	OrderStatus        string     `gorm:"default:'pending'" json:"order_status"`
+	DeliveryPhoto      string     `json:"delivery_photo,omitempty"`
 	CancellationReason string     `json:"cancellation_reason,omitempty"`
 	CancelledAt        *time.Time `json:"cancelled_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
@@ -1173,6 +1174,7 @@ func main() {
 		var requestData struct {
 			Status             string `json:"status"`
 			CancellationReason string `json:"cancellation_reason,omitempty"`
+			DeliveryPhoto      string `json:"delivery_photo,omitempty"`
 		}
 
 		if err := c.BodyParser(&requestData); err != nil {
@@ -1209,6 +1211,11 @@ func main() {
 			now := time.Now()
 			updateData["cancellation_reason"] = requestData.CancellationReason
 			updateData["cancelled_at"] = now
+		}
+
+		// If status is completed, add delivery photo if provided
+		if requestData.Status == "completed" && requestData.DeliveryPhoto != "" {
+			updateData["delivery_photo"] = requestData.DeliveryPhoto
 		}
 
 		result := DB.Model(&order).Updates(updateData)

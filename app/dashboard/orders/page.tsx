@@ -27,6 +27,7 @@ interface Order {
   payment_method: string;
   payment_status: string;
   order_status: string;
+  delivery_photo?: string;
   cancellation_reason?: string;
   cancelled_at?: string;
   created_at: string;
@@ -47,6 +48,10 @@ export default function DashboardOrdersPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [orderToComplete, setOrderToComplete] = useState<Order | null>(null);
+  const [deliveryPhoto, setDeliveryPhoto] = useState<string>("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -85,6 +90,16 @@ export default function DashboardOrdersPage() {
       if (order) {
         setOrderToCancel(order);
         setShowCancelModal(true);
+      }
+      return;
+    }
+
+    // If status is completed, show photo upload modal
+    if (newStatus === 'completed') {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setOrderToComplete(order);
+        setShowPhotoModal(true);
       }
       return;
     }
