@@ -112,25 +112,41 @@
 
 .status-filter {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+  justify-content: flex-start;
   margin-top: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding-bottom: 8px;
+}
+
+.status-filter::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .status-filter-btn {
-  padding: 8px 12px;
+  padding: 12px 20px;
   border: var(--border);
   background: white;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 @media (min-width: 768px) {
+  .status-filter {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-x: visible;
+  }
+
   .status-filter-btn {
     padding: 12px 24px;
     font-size: 14px;
@@ -598,6 +614,72 @@
   }
 
   .cancellation-note {
+    font-size: 11px;
+  }
+}
+
+/* Delivery Photo Styles */
+.order-delivery-photo {
+  margin-top: 16px;
+  padding: 16px;
+  background: #e8f5e9;
+  border: 2px solid #4caf50;
+  border-left: 4px solid #34c759;
+}
+
+.photo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #34c759;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.photo-header svg {
+  flex-shrink: 0;
+}
+
+.photo-container {
+  margin: 12px 0;
+  padding: 8px;
+  background: white;
+  border: 2px solid #1a1a1a;
+  text-align: center;
+}
+
+.delivery-photo-img {
+  max-width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.photo-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .order-delivery-photo {
+    padding: 12px;
+  }
+
+  .photo-header {
+    font-size: 13px;
+  }
+
+  .delivery-photo-img {
+    max-height: 300px;
+  }
+
+  .photo-note {
     font-size: 11px;
   }
 }

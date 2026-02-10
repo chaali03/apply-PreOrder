@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Spinner } from "../../components/ui/ios-spinner";
 import './dashboard-new.css';
@@ -381,7 +382,7 @@ export default function DashboardPage() {
           >
             <h2 className="dash-section-title">Aksi Cepat</h2>
             <div className="dash-quick-actions">
-              <button className="dash-quick-card">
+              <Link href="/dashboard/menu" className="dash-quick-card">
                 <div className="dash-quick-icon" style={{ background: '#bff000' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -389,40 +390,39 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <span>Tambah Menu</span>
-              </button>
+              </Link>
 
-              <button className="dash-quick-card">
+              <Link href="/dashboard/menu" className="dash-quick-card">
                 <div className="dash-quick-icon" style={{ background: '#FA5209' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="8.5" cy="7" r="4"></circle>
-                    <line x1="20" y1="8" x2="20" y2="14"></line>
-                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                    <line x1="1" y1="10" x2="23" y2="10"></line>
                   </svg>
                 </div>
-                <span>Tambah Pelanggan</span>
-              </button>
+                <span>Lihat Stock</span>
+              </Link>
 
-              <button className="dash-quick-card">
+              <Link href="/dashboard/orders" className="dash-quick-card">
                 <div className="dash-quick-icon" style={{ background: '#3b82f6' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                  </svg>
+                </div>
+                <span>Lihat Pesanan</span>
+              </Link>
+
+              <Link href="/dashboard/laporan" className="dash-quick-card">
+                <div className="dash-quick-icon" style={{ background: '#10b981' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
                   </svg>
                 </div>
                 <span>Lihat Laporan</span>
-              </button>
-
-              <button className="dash-quick-card">
-                <div className="dash-quick-icon" style={{ background: '#10b981' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                </div>
-                <span>Kelola Promo</span>
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>

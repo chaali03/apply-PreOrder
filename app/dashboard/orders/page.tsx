@@ -169,6 +169,78 @@ export default function DashboardOrdersPage() {
     }
   };
 
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showNotif('File harus berupa gambar');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotif('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setDeliveryPhoto(reader.result as string);
+      setUploadingPhoto(false);
+    };
+    reader.onerror = () => {
+      showNotif('Gagal membaca file');
+      setUploadingPhoto(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCompleteOrder = async () => {
+    if (!orderToComplete) return;
+
+    if (!deliveryPhoto) {
+      showNotif('Foto dokumentasi harus diupload');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/orders/${orderToComplete.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: 'completed',
+          delivery_photo: deliveryPhoto
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        setOrders(orders.map(order => 
+          order.id === orderToComplete.id ? { 
+            ...order, 
+            order_status: 'completed',
+            delivery_photo: deliveryPhoto
+          } : order
+        ));
+        showNotif(`Pesanan ${orderToComplete.order_number} selesai`);
+        setShowPhotoModal(false);
+        setOrderToComplete(null);
+        setDeliveryPhoto('');
+      } else {
+        showNotif(data.message || 'Gagal menyelesaikan pesanan');
+      }
+    } catch (error) {
+      console.error('Error completing order:', error);
+      showNotif('Gagal terhubung ke server');
+    }
+  };
+
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
 
@@ -672,6 +744,151 @@ export default function DashboardOrdersPage() {
                   style={{ opacity: cancellationReason.trim() ? 1 : 0.5 }}
                 >
                   Ya, Batalkan Pesanan
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Photo Upload Modal */}
+      <AnimatePresence>
+        {showPhotoModal && orderToComplete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay"
+            onClick={() => {
+              setShowPhotoModal(false);
+              setDeliveryPhoto('');
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="delete-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setShowPhotoModal(false);
+                  setDeliveryPhoto('');
+                }}
+                className="modal-close-btn"
+              >
+                ×
+              </button>
+
+              <div className="modal-icon-success">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+
+              <h2 className="modal-title">Dokumentasi Pengiriman</h2>
+              <p className="modal-message">
+                Upload foto bukti pengiriman untuk pesanan <strong>{orderToComplete.order_number}</strong>
+              </p>
+
+              <div className="modal-order-info">
+                <p><strong>Customer:</strong> {orderToComplete.customer_name}</p>
+                <p><strong>Alamat:</strong> {orderToComplete.delivery_address}</p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label 
+                  htmlFor="photo-upload"
+                  style={{ 
+                    display: 'block', 
+                    width: '100%',
+                    padding: '40px 20px',
+                    border: '2px dashed #1a1a1a',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: deliveryPhoto ? '#f0f0f0' : 'white',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {uploadingPhoto ? (
+                    <div>Memproses foto...</div>
+                  ) : deliveryPhoto ? (
+                    <div>
+                      <img 
+                        src={deliveryPhoto} 
+                        alt="Preview" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '200px',
+                          objectFit: 'contain'
+                        }} 
+                      />
+                      <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                        Klik untuk ganti foto
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg 
+                        width="48" 
+                        height="48" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2"
+                        style={{ margin: '0 auto 10px' }}
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                      <p style={{ fontWeight: 600, marginBottom: '5px' }}>
+                        Klik untuk upload foto
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#666' }}>
+                        Atau ambil foto menggunakan kamera
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+                        Max 5MB • JPG, PNG
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoCapture}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+
+              <p className="modal-warning">
+                Foto akan disimpan sebagai bukti pengiriman dan dapat dilihat oleh customer
+              </p>
+
+              <div className="modal-actions">
+                <button
+                  onClick={() => {
+                    setShowPhotoModal(false);
+                    setDeliveryPhoto('');
+                  }}
+                  className="modal-btn-cancel"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleCompleteOrder}
+                  className="modal-btn-confirm"
+                  disabled={!deliveryPhoto || uploadingPhoto}
+                  style={{ opacity: (deliveryPhoto && !uploadingPhoto) ? 1 : 0.5 }}
+                >
+                  Selesaikan Pesanan
                 </button>
               </div>
             </motion.div>
