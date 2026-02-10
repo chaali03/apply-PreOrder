@@ -70,6 +70,25 @@ type Order struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+// OrderItem model
+type OrderItem struct {
+	ID           string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	OrderID      string    `gorm:"type:uuid;not null" json:"order_id"`
+	ProductID    string    `gorm:"type:uuid" json:"product_id"`
+	ProductName  string    `gorm:"not null" json:"product_name"`
+	ProductPrice float64   `gorm:"not null" json:"product_price"`
+	ProductImage string    `json:"product_image"`
+	Quantity     int       `gorm:"not null" json:"quantity"`
+	Subtotal     float64   `gorm:"not null" json:"subtotal"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// OrderWithItems for response
+type OrderWithItems struct {
+	Order
+	Items []OrderItem `json:"items"`
+}
+
 // Dashboard Stats Response
 type DashboardStats struct {
 	TotalCustomers   int64   `json:"total_customers"`
@@ -419,9 +438,10 @@ func main() {
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3000, http://localhost:3001",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+		AllowOrigins:     "http://localhost:3000,http://localhost:3001",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+		AllowCredentials: true,
 	}))
 
 	// Routes
@@ -940,6 +960,280 @@ func main() {
 		return c.JSON(fiber.Map{
 			"success": true,
 			"data":    stats,
+		})
+	})
+
+	// ============================================
+	// ORDER ENDPOINTS
+	// ============================================
+
+	// Create new order
+	app.Post("/api/orders", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var requestData struct {
+			Order Order         `json:"order"`
+			Items []OrderItem   `json:"items"`
+		}
+
+		if err := c.BodyParser(&requestData); err != nil {
+			log.Printf("Error parsing order request: %v", err)
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		// Generate order number
+		orderNumber := fmt.Sprintf("ORD-%s-%03d", time.Now().Format("20060102"), time.Now().Unix()%1000)
+		requestData.Order.OrderNumber = orderNumber
+		requestData.Order.PaymentStatus = "paid"
+		requestData.Order.OrderStatus = "processing"
+
+		// Create order
+		if err := DB.Create(&requestData.Order).Error; err != nil {
+			log.Printf("Error creating order: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create order",
+			})
+		}
+
+		// Create order items
+		for i := range requestData.Items {
+			requestData.Items[i].OrderID = requestData.Order.ID
+			if err := DB.Create(&requestData.Items[i]).Error; err != nil {
+				log.Printf("Error creating order item: %v", err)
+				// Rollback order if items fail
+				DB.Delete(&requestData.Order)
+				return c.Status(500).JSON(fiber.Map{
+					"success": false,
+					"message": "Failed to create order items",
+				})
+			}
+		}
+
+		log.Printf("✅ Order created: %s for %s", orderNumber, requestData.Order.CustomerEmail)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Order created successfully",
+			"data": fiber.Map{
+				"order": requestData.Order,
+				"items": requestData.Items,
+			},
+		})
+	})
+
+	// Get all orders (admin)
+	app.Get("/api/orders", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var orders []Order
+		result := DB.Order("created_at DESC").Find(&orders)
+		
+		if result.Error != nil {
+			log.Printf("Error fetching orders: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch orders",
+			})
+		}
+
+		// Get items for each order
+		var ordersWithItems []OrderWithItems
+		for _, order := range orders {
+			var items []OrderItem
+			DB.Where("order_id = ?", order.ID).Find(&items)
+			
+			ordersWithItems = append(ordersWithItems, OrderWithItems{
+				Order: order,
+				Items: items,
+			})
+		}
+
+		log.Printf("GET /api/orders: Returning %d orders", len(orders))
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    ordersWithItems,
+		})
+	})
+
+	// Get single order by ID
+	app.Get("/api/orders/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var order Order
+		
+		if err := DB.First(&order, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Order not found",
+			})
+		}
+
+		// Get order items
+		var items []OrderItem
+		DB.Where("order_id = ?", order.ID).Find(&items)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data": OrderWithItems{
+				Order: order,
+				Items: items,
+			},
+		})
+	})
+
+	// Get orders by customer email or phone
+	app.Get("/api/orders/customer/:identifier", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		identifier := c.Params("identifier")
+		var orders []Order
+		
+		// Try to find by phone first, then by email
+		result := DB.Where("customer_phone = ? OR customer_email = ?", identifier, identifier).Order("created_at DESC").Find(&orders)
+		
+		if result.Error != nil {
+			log.Printf("Error fetching orders for %s: %v", identifier, result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch orders",
+			})
+		}
+
+		// Get items for each order
+		var ordersWithItems []OrderWithItems
+		for _, order := range orders {
+			var items []OrderItem
+			DB.Where("order_id = ?", order.ID).Find(&items)
+			
+			ordersWithItems = append(ordersWithItems, OrderWithItems{
+				Order: order,
+				Items: items,
+			})
+		}
+
+		log.Printf("GET /api/orders/customer/%s: Returning %d orders", identifier, len(orders))
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    ordersWithItems,
+		})
+	})
+
+	// Update order status (admin)
+	app.Put("/api/orders/:id/status", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var requestData struct {
+			Status string `json:"status"`
+		}
+
+		if err := c.BodyParser(&requestData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		var order Order
+		if err := DB.First(&order, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Order not found",
+			})
+		}
+
+		// Update status
+		oldStatus := order.OrderStatus
+		result := DB.Model(&order).Updates(map[string]interface{}{
+			"order_status": requestData.Status,
+		})
+
+		if result.Error != nil {
+			log.Printf("Error updating order status: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update order status",
+			})
+		}
+
+		order.OrderStatus = requestData.Status
+		log.Printf("✅ Order %s status updated: %s → %s", order.OrderNumber, oldStatus, requestData.Status)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Order status updated",
+			"data":    order,
+		})
+	})
+
+	// Delete order (admin)
+	app.Delete("/api/orders/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		
+		// Get order first for logging
+		var order Order
+		if err := DB.First(&order, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Order not found",
+			})
+		}
+
+		// Delete order (items will be deleted by CASCADE)
+		result := DB.Delete(&order)
+		
+		if result.Error != nil {
+			log.Printf("Error deleting order: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to delete order",
+			})
+		}
+
+		log.Printf("✅ Order deleted: %s", order.OrderNumber)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Order deleted successfully",
 		})
 	})
 

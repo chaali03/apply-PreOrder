@@ -13,6 +13,17 @@ interface DashboardStats {
   customer_growth: number;
   order_growth: number;
   revenue_growth: number;
+  active_orders_list: Order[];
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  total: number;
+  order_status: string;
+  created_at: string;
 }
 
 export default function DashboardPage() {
@@ -50,6 +61,35 @@ export default function DashboardPage() {
   const formatGrowth = (growth: number) => {
     const sign = growth >= 0 ? '+' : '';
     return `${sign}${growth.toFixed(1)}%`;
+  };
+
+  // Get status info
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return { label: 'Menunggu', color: '#999', bgColor: '#f3f4f6' };
+      case 'processing':
+        return { label: 'Diproses', color: '#f59e0b', bgColor: '#fef3c7' };
+      case 'on_delivery':
+        return { label: 'Diantar', color: '#8b5cf6', bgColor: '#ede9fe' };
+      case 'completed':
+        return { label: 'Selesai', color: '#34C759', bgColor: '#d1fae5' };
+      case 'cancelled':
+        return { label: 'Dibatalkan', color: '#FF3B30', bgColor: '#fee2e2' };
+      default:
+        return { label: status, color: '#999', bgColor: '#f3f4f6' };
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -148,7 +188,7 @@ export default function DashboardPage() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
-            <span>Ke Website</span>
+            <span>Ke Home</span>
           </a>
         </div>
       </aside>
@@ -287,7 +327,7 @@ export default function DashboardPage() {
           >
             <div className="dash-section-header">
               <h2 className="dash-section-title">Pesanan Terbaru</h2>
-              <button className="dash-view-all">Lihat Semua →</button>
+              <a href="/dashboard/orders" className="dash-view-all">Lihat Semua →</a>
             </div>
             
             <div className="dash-table-wrapper">
@@ -295,24 +335,53 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                   <Spinner size="lg" />
                 </div>
-              ) : stats && stats.total_orders > 0 ? (
+              ) : stats && stats.active_orders_list && stats.active_orders_list.length > 0 ? (
                 <table className="dash-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
+                      <th>No. Pesanan</th>
                       <th>Pelanggan</th>
-                      <th className="dash-hide-mobile">Menu</th>
+                      <th className="dash-hide-mobile">Telepon</th>
                       <th>Total</th>
                       <th>Status</th>
-                      <th className="dash-hide-mobile">Aksi</th>
+                      <th className="dash-hide-mobile">Waktu</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                        <p>Belum ada pesanan. Data akan muncul setelah ada transaksi.</p>
-                      </td>
-                    </tr>
+                    {stats.active_orders_list.slice(0, 5).map((order) => {
+                      const statusInfo = getStatusInfo(order.order_status);
+                      return (
+                        <tr key={order.id}>
+                          <td>
+                            <a href={`/dashboard/orders`} style={{ color: '#ff4d00', fontWeight: 700, textDecoration: 'none' }}>
+                              {order.order_number}
+                            </a>
+                          </td>
+                          <td>{order.customer_name}</td>
+                          <td className="dash-hide-mobile">{order.customer_phone}</td>
+                          <td style={{ fontWeight: 700 }}>Rp {order.total.toLocaleString()}</td>
+                          <td>
+                            <span 
+                              className="status-badge"
+                              style={{ 
+                                backgroundColor: statusInfo.bgColor,
+                                color: statusInfo.color,
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                border: `2px solid ${statusInfo.color}`
+                              }}
+                            >
+                              {statusInfo.label}
+                            </span>
+                          </td>
+                          <td className="dash-hide-mobile" style={{ fontSize: '13px', color: '#666' }}>
+                            {formatDate(order.created_at)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               ) : (

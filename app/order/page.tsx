@@ -41,6 +41,10 @@ export default function OrderPage() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer" | "qris">("cash");
+  const [submitting, setSubmitting] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
@@ -81,15 +85,67 @@ export default function OrderPage() {
     if (customerInfo.name && customerInfo.phone && customerInfo.address) {
       setStep("payment");
     } else {
-      alert("Mohon lengkapi data pengiriman");
+      setNotificationMessage("Mohon lengkapi semua data pengiriman");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
     }
   };
 
-  const handlePayment = () => {
-    // Simulate payment processing
-    setTimeout(() => {
-      setStep("success");
-    }, 1500);
+  const handlePayment = async () => {
+    setSubmitting(true);
+    
+    try {
+      // Prepare order data
+      const orderData = {
+        order: {
+          customer_name: customerInfo.name,
+          customer_email: `${customerInfo.phone}@phone.local`, // Generate dummy email from phone
+          customer_phone: customerInfo.phone,
+          delivery_address: customerInfo.address,
+          subtotal: subtotal,
+          delivery_fee: deliveryFee,
+          total: total,
+          payment_method: paymentMethod,
+          payment_status: "paid",
+          order_status: "processing"
+        },
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          product_name: item.name,
+          product_price: item.price,
+          product_image: item.image,
+          quantity: item.quantity,
+          subtotal: item.price * item.quantity
+        }))
+      };
+
+      const response = await fetch('http://localhost:8080/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setOrderNumber(data.data.order.order_number);
+        // Clear cart
+        localStorage.removeItem('orderData');
+        // Show success
+        setStep("success");
+      } else {
+        setNotificationMessage('Gagal membuat pesanan: ' + data.message);
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      setNotificationMessage('Gagal terhubung ke server');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -251,7 +307,11 @@ export default function OrderPage() {
                   <button onClick={() => setStep("cart")} className="btn-secondary">
                     Kembali
                   </button>
-                  <button onClick={handleCheckout} className="btn-primary">
+                  <button 
+                    onClick={handleCheckout} 
+                    className="btn-primary"
+                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address}
+                  >
                     Lanjut Bayar
                   </button>
                 </div>
@@ -362,8 +422,9 @@ export default function OrderPage() {
                           className="qr-image"
                           onError={(e) => {
                             // Fallback jika gambar tidak ada
-                            e.currentTarget.style.display = 'none';
-                            const placeholder = e.currentTarget.nextElementSibling;
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const placeholder = target.nextElementSibling as HTMLElement;
                             if (placeholder) placeholder.style.display = 'flex';
                           }}
                         />
@@ -402,11 +463,11 @@ export default function OrderPage() {
                 </div>
 
                 <div className="checkout-actions">
-                  <button onClick={() => setStep("checkout")} className="btn-secondary">
+                  <button onClick={() => setStep("checkout")} className="btn-secondary" disabled={submitting}>
                     Kembali
                   </button>
-                  <button onClick={handlePayment} className="btn-primary">
-                    Konfirmasi Pembayaran
+                  <button onClick={handlePayment} className="btn-primary" disabled={submitting}>
+                    {submitting ? "Memproses..." : "Konfirmasi Pembayaran"}
                   </button>
                 </div>
               </div>
@@ -441,7 +502,7 @@ export default function OrderPage() {
                 <div className="order-info">
                   <div className="info-row">
                     <span>Nomor Pesanan</span>
-                    <strong>#ORD-{Math.floor(Math.random() * 10000)}</strong>
+                    <strong>#{orderNumber}</strong>
                   </div>
                   <div className="info-row">
                     <span>Total Pembayaran</span>
@@ -462,7 +523,7 @@ export default function OrderPage() {
                 </div>
 
                 <div className="success-actions">
-                  <a href="/kurir" className="btn-secondary">
+                  <a href={`/kurir?phone=${encodeURIComponent(customerInfo.phone)}`} className="btn-secondary">
                     Lacak Pesanan
                   </a>
                   <a href="/menu" className="btn-primary">
@@ -474,6 +535,20 @@ export default function OrderPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="notification-toast"
+          >
+            {notificationMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

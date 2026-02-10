@@ -428,3 +428,116 @@
   color: #666;
   font-size: 18px;
 }
+
+/* Email Input Section */
+.email-input-section {
+  max-width: 500px;
+  margin: 30px auto 0;
+  display: flex;
+  gap: 10px;
+}
+
+.email-input {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 16px;
+  border: 3px solid #1a1a1a;
+  background: white;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.email-input:focus {
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.email-submit-btn {
+  padding: 14px 30px;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #bff000;
+  border: 3px solid #1a1a1a;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.email-submit-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.2);
+}
+
+.customer-email-display {
+  max-width: 500px;
+  margin: 30px auto 0;
+  padding: 14px 20px;
+  background: white;
+  border: 3px solid #1a1a1a;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+
+.customer-email-display span {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.change-email-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: white;
+  border: 2px solid #1a1a1a;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.change-email-btn:hover {
+  background: #f3f4f6;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+.order-total {
+  margin: 15px 0;
+  padding: 10px 0;
+  border-top: 2px solid #e5e7eb;
+  font-size: 16px;
+}
+
+.order-payment {
+  font-size: 14px;
+  color: #666;
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .email-input-section {
+    flex-direction: column;
+  }
+
+  .email-submit-btn {
+    width: 100%;
+  }
+
+  .customer-email-display {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .change-email-btn {
+    width: 100%;
+  }
+}

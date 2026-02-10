@@ -1,92 +1,126 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import MobileMenu from '../../components/ui/mobile-menu';
 import CurvedMenu from '../../components/ui/curved-menu';
 import './kurir.css';
 
-interface Order {
+interface OrderItem {
   id: string;
-  customerName: string;
-  items: string[];
-  status: 'pending' | 'preparing' | 'delivering' | 'delivered';
-  address: string;
-  phone: string;
-  orderTime: string;
-  estimatedTime?: string;
+  product_name: string;
+  product_price: number;
+  product_image: string;
+  quantity: number;
+  subtotal: number;
 }
 
-const mockOrders: Order[] = [
-  {
-    id: "ORD-001",
-    customerName: "Ahmad Faisal",
-    items: ["Cookies x2", "Udang Keju 3pcs x1"],
-    status: "delivering",
-    address: "Jl. Raya TB No. 123, Tangerang",
-    phone: "0812-3456-7890",
-    orderTime: "10:30",
-    estimatedTime: "11:00"
-  },
-  {
-    id: "ORD-002",
-    customerName: "Siti Nurhaliza",
-    items: ["Cookies x3"],
-    status: "preparing",
-    address: "Jl. Merdeka No. 45, Tangerang",
-    phone: "0813-4567-8901",
-    orderTime: "10:45",
-    estimatedTime: "11:15"
-  },
-  {
-    id: "ORD-003",
-    customerName: "Budi Santoso",
-    items: ["Udang Keju 3pcs x2", "Cookies x1"],
-    status: "pending",
-    address: "Jl. Sudirman No. 78, Tangerang",
-    phone: "0814-5678-9012",
-    orderTime: "11:00",
-    estimatedTime: "11:30"
-  },
-  {
-    id: "ORD-004",
-    customerName: "Dewi Lestari",
-    items: ["Cookies x1"],
-    status: "delivered",
-    address: "Jl. Gatot Subroto No. 90, Tangerang",
-    phone: "0815-6789-0123",
-    orderTime: "09:30",
-    estimatedTime: "10:00"
-  },
-];
+interface Order {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  delivery_address: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  payment_method: string;
+  payment_status: string;
+  order_status: string;
+  created_at: string;
+  items: OrderItem[];
+}
 
 export default function KurirPage() {
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [orders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [customerPhone, setCustomerPhone] = useState("");
 
-  const filteredOrders = orders.filter(order => {
+  // Load phone from URL or localStorage
+  useEffect(() => {
+    const phoneFromUrl = searchParams.get('phone');
+    if (phoneFromUrl) {
+      setCustomerPhone(phoneFromUrl);
+      localStorage.setItem('customerPhone', phoneFromUrl);
+    } else {
+      const savedPhone = localStorage.getItem('customerPhone');
+      if (savedPhone) {
+        setCustomerPhone(savedPhone);
+      }
+    }
+  }, [searchParams]);
+
+  // Fetch orders when phone is available
+  useEffect(() => {
+    if (!customerPhone) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/orders/customer/${encodeURIComponent(customerPhone)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setOrders(data.data || []);
+        } else {
+          console.error('Failed to fetch orders:', data.message);
+          setOrders([]);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [customerPhone]);
+
+  const filteredOrders = (orders || []).filter(order => {
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.address.toLowerCase().includes(searchQuery.toLowerCase());
+      order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.delivery_address.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = selectedStatus === "all" || order.status === selectedStatus;
+    const matchesStatus = selectedStatus === "all" || order.order_status === selectedStatus;
     
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusInfo = (status: Order['status']) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case 'pending':
-        return { label: 'Menunggu', color: '#6b7280', icon: 'clock' };
-      case 'preparing':
-        return { label: 'Disiapkan', color: '#f59e0b', icon: 'chef' };
-      case 'delivering':
-        return { label: 'Diantar', color: '#3b82f6', icon: 'truck' };
-      case 'delivered':
-        return { label: 'Selesai', color: '#10b981', icon: 'check' };
+        return { label: 'Menunggu', color: '#999', icon: 'clock' };
+      case 'processing':
+        return { label: 'Diproses', color: '#f59e0b', icon: 'chef' };
+      case 'on_delivery':
+        return { label: 'Diantar', color: '#8b5cf6', icon: 'truck' };
+      case 'completed':
+        return { label: 'Selesai', color: '#34C759', icon: 'check' };
+      case 'cancelled':
+        return { label: 'Dibatalkan', color: '#FF3B30', icon: 'x' };
+      default:
+        return { label: status, color: '#999', icon: 'clock' };
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -121,6 +155,44 @@ export default function KurirPage() {
             <p className="kurir-hero-subtitle">
               Pantau status pesanan Anda secara real-time
             </p>
+            {!customerPhone && (
+              <div className="email-input-section">
+                <input
+                  type="tel"
+                  placeholder="Masukkan nomor telepon Anda"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="email-input"
+                />
+                <button
+                  onClick={() => {
+                    if (searchQuery) {
+                      setCustomerPhone(searchQuery);
+                      localStorage.setItem('customerPhone', searchQuery);
+                      setSearchQuery("");
+                    }
+                  }}
+                  className="email-submit-btn"
+                >
+                  Lacak Pesanan
+                </button>
+              </div>
+            )}
+            {customerPhone && (
+              <div className="customer-email-display">
+                <span>No. Telepon: {customerPhone}</span>
+                <button
+                  onClick={() => {
+                    setCustomerPhone("");
+                    localStorage.removeItem('customerPhone');
+                    setOrders([]);
+                  }}
+                  className="change-email-btn"
+                >
+                  Ganti Nomor
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -154,20 +226,20 @@ export default function KurirPage() {
               Menunggu
             </button>
             <button
-              onClick={() => setSelectedStatus("preparing")}
-              className={`status-filter-btn ${selectedStatus === "preparing" ? 'active' : ''}`}
+              onClick={() => setSelectedStatus("processing")}
+              className={`status-filter-btn ${selectedStatus === "processing" ? 'active' : ''}`}
             >
-              Disiapkan
+              Diproses
             </button>
             <button
-              onClick={() => setSelectedStatus("delivering")}
-              className={`status-filter-btn ${selectedStatus === "delivering" ? 'active' : ''}`}
+              onClick={() => setSelectedStatus("on_delivery")}
+              className={`status-filter-btn ${selectedStatus === "on_delivery" ? 'active' : ''}`}
             >
               Diantar
             </button>
             <button
-              onClick={() => setSelectedStatus("delivered")}
-              className={`status-filter-btn ${selectedStatus === "delivered" ? 'active' : ''}`}
+              onClick={() => setSelectedStatus("completed")}
+              className={`status-filter-btn ${selectedStatus === "completed" ? 'active' : ''}`}
             >
               Selesai
             </button>
@@ -177,84 +249,101 @@ export default function KurirPage() {
         {/* Orders List */}
         <section className="orders-section">
           <div className="orders-container">
-            {filteredOrders.map((order) => {
-              const statusInfo = getStatusInfo(order.status);
-              return (
-                <div key={order.id} className="order-card">
-                  <div className="order-header">
-                    <div className="order-id-section">
-                      <span className="order-id">{order.id}</span>
-                      <span className="order-time">{order.orderTime}</span>
-                    </div>
-                    <div className="order-status" style={{ backgroundColor: statusInfo.color }}>
-                      <div className={`status-icon ${order.status}`}>
-                        {statusInfo.icon === 'clock' && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                          </svg>
-                        )}
-                        {statusInfo.icon === 'chef' && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"></path>
-                            <line x1="6" y1="17" x2="18" y2="17"></line>
-                          </svg>
-                        )}
-                        {statusInfo.icon === 'truck' && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="truck-icon">
-                            <rect x="1" y="3" width="15" height="13"></rect>
-                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                          </svg>
-                        )}
-                        {statusInfo.icon === 'check' && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                        )}
-                      </div>
-                      <span>{statusInfo.label}</span>
-                    </div>
-                  </div>
-
-                  <div className="order-body">
-                    <div className="order-customer">
-                      <h3>{order.customerName}</h3>
-                      <p className="order-phone">{order.phone}</p>
-                    </div>
-
-                    <div className="order-items">
-                      <strong>Items:</strong>
-                      <ul>
-                        {order.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="order-address">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                      </svg>
-                      <span>{order.address}</span>
-                    </div>
-
-                    {order.estimatedTime && order.status !== 'delivered' && (
-                      <div className="order-eta">
-                        <span>Estimasi: {order.estimatedTime}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {filteredOrders.length === 0 && (
+            {loading ? (
+              <div className="loading-state">
+                <p>Memuat pesanan...</p>
+              </div>
+            ) : !customerPhone ? (
+              <div className="no-orders">
+                <p>Masukkan nomor telepon Anda untuk melacak pesanan</p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
               <div className="no-orders">
                 <p>Tidak ada pesanan ditemukan</p>
               </div>
+            ) : (
+              filteredOrders.map((order) => {
+                const statusInfo = getStatusInfo(order.order_status);
+                return (
+                  <div key={order.id} className="order-card">
+                    <div className="order-header">
+                      <div className="order-id-section">
+                        <span className="order-id">{order.order_number}</span>
+                        <span className="order-time">{formatDate(order.created_at)}</span>
+                      </div>
+                      <div className="order-status" style={{ backgroundColor: statusInfo.color }}>
+                        <div className={`status-icon ${order.order_status}`}>
+                          {statusInfo.icon === 'clock' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                          )}
+                          {statusInfo.icon === 'chef' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"></path>
+                              <line x1="6" y1="17" x2="18" y2="17"></line>
+                            </svg>
+                          )}
+                          {statusInfo.icon === 'truck' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="truck-icon">
+                              <rect x="1" y="3" width="15" height="13"></rect>
+                              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                            </svg>
+                          )}
+                          {statusInfo.icon === 'check' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          )}
+                          {statusInfo.icon === 'x' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          )}
+                        </div>
+                        <span>{statusInfo.label}</span>
+                      </div>
+                    </div>
+
+                    <div className="order-body">
+                      <div className="order-customer">
+                        <h3>{order.customer_name}</h3>
+                      </div>
+
+                      <div className="order-items">
+                        <strong>Items:</strong>
+                        <ul>
+                          {order.items.map((item) => (
+                            <li key={item.id}>
+                              {item.product_name} x{item.quantity} - Rp {item.subtotal.toLocaleString()}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="order-total">
+                        <strong>Total: Rp {order.total.toLocaleString()}</strong>
+                      </div>
+
+                      <div className="order-address">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>{order.delivery_address}</span>
+                      </div>
+
+                      <div className="order-payment">
+                        <span>Pembayaran: {order.payment_method === 'cash' ? 'Cash on Delivery' : order.payment_method === 'transfer' ? 'Transfer Bank' : 'QRIS'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </section>
