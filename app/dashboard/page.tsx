@@ -1,11 +1,56 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Spinner } from "../../components/ui/ios-spinner";
 import './dashboard-new.css';
+
+interface DashboardStats {
+  total_customers: number;
+  total_orders: number;
+  total_revenue: number;
+  active_orders: number;
+  customer_growth: number;
+  order_growth: number;
+  revenue_growth: number;
+}
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    fetch('http://localhost:8080/api/dashboard/stats')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setStats(data.data);
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching dashboard stats:', error);
+        setLoading(false);
+      });
+  }, []);
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(1)}K`;
+    }
+    return amount.toLocaleString();
+  };
+
+  // Format growth percentage
+  const formatGrowth = (growth: number) => {
+    const sign = growth >= 0 ? '+' : '';
+    return `${sign}${growth.toFixed(1)}%`;
+  };
 
   return (
     <div className="dash-container">
@@ -129,83 +174,108 @@ export default function DashboardPage() {
         <div className="dash-content">
           {/* Stats Grid */}
           <div className="dash-stats-grid">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="dash-stat-card"
-            >
-              <div className="dash-stat-icon" style={{ background: '#bff000' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
+            {loading ? (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px', flexDirection: 'column', gap: '20px' }}>
+                <Spinner size="lg" />
+                <p style={{ color: '#666', fontSize: '14px' }}>Memuat statistik...</p>
               </div>
-              <div className="dash-stat-content">
-                <p className="dash-stat-label">Total Pelanggan</p>
-                <h3 className="dash-stat-value">1,234</h3>
-                <p className="dash-stat-change positive">+12%</p>
-              </div>
-            </motion.div>
+            ) : stats ? (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="dash-stat-card"
+                >
+                  <div className="dash-stat-icon" style={{ background: '#bff000' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </div>
+                  <div className="dash-stat-content">
+                    <p className="dash-stat-label">Total Pelanggan</p>
+                    <h3 className="dash-stat-value">{stats.total_customers.toLocaleString()}</h3>
+                    {stats.total_customers > 0 && stats.customer_growth !== 0 && (
+                      <p className={`dash-stat-change ${stats.customer_growth >= 0 ? 'positive' : 'negative'}`}>
+                        {formatGrowth(stats.customer_growth)}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="dash-stat-card"
-            >
-              <div className="dash-stat-icon" style={{ background: '#FA5209' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="9" cy="21" r="1"></circle>
-                  <circle cx="20" cy="21" r="1"></circle>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
-              </div>
-              <div className="dash-stat-content">
-                <p className="dash-stat-label">Total Pesanan</p>
-                <h3 className="dash-stat-value">856</h3>
-                <p className="dash-stat-change positive">+8%</p>
-              </div>
-            </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="dash-stat-card"
+                >
+                  <div className="dash-stat-icon" style={{ background: '#FA5209' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="9" cy="21" r="1"></circle>
+                      <circle cx="20" cy="21" r="1"></circle>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                  </div>
+                  <div className="dash-stat-content">
+                    <p className="dash-stat-label">Total Pesanan</p>
+                    <h3 className="dash-stat-value">{stats.total_orders.toLocaleString()}</h3>
+                    {stats.total_orders > 0 && stats.order_growth !== 0 && (
+                      <p className={`dash-stat-change ${stats.order_growth >= 0 ? 'positive' : 'negative'}`}>
+                        {formatGrowth(stats.order_growth)}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="dash-stat-card"
-            >
-              <div className="dash-stat-icon" style={{ background: '#3b82f6' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="1" x2="12" y2="23"></line>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-              </div>
-              <div className="dash-stat-content">
-                <p className="dash-stat-label">Pendapatan</p>
-                <h3 className="dash-stat-value">45.2M</h3>
-                <p className="dash-stat-change positive">+23%</p>
-              </div>
-            </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="dash-stat-card"
+                >
+                  <div className="dash-stat-icon" style={{ background: '#3b82f6' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="1" x2="12" y2="23"></line>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                  </div>
+                  <div className="dash-stat-content">
+                    <p className="dash-stat-label">Pendapatan</p>
+                    <h3 className="dash-stat-value">Rp {formatCurrency(stats.total_revenue)}</h3>
+                    {stats.total_revenue > 0 && stats.revenue_growth !== 0 && (
+                      <p className={`dash-stat-change ${stats.revenue_growth >= 0 ? 'positive' : 'negative'}`}>
+                        {formatGrowth(stats.revenue_growth)}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="dash-stat-card"
-            >
-              <div className="dash-stat-icon" style={{ background: '#10b981' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="dash-stat-card"
+                >
+                  <div className="dash-stat-icon" style={{ background: '#10b981' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                  </div>
+                  <div className="dash-stat-content">
+                    <p className="dash-stat-label">Pesanan Aktif</p>
+                    <h3 className="dash-stat-value">{stats.active_orders}</h3>
+                    <p className="dash-stat-change neutral">Diproses</p>
+                  </div>
+                </motion.div>
+              </>
+            ) : (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: '#666' }}>
+                <p>Gagal memuat data. Pastikan backend API running.</p>
               </div>
-              <div className="dash-stat-content">
-                <p className="dash-stat-label">Pesanan Aktif</p>
-                <h3 className="dash-stat-value">42</h3>
-                <p className="dash-stat-change neutral">Diproses</p>
-              </div>
-            </motion.div>
+            )}
           </div>
 
           {/* Recent Orders */}
@@ -221,65 +291,41 @@ export default function DashboardPage() {
             </div>
             
             <div className="dash-table-wrapper">
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Pelanggan</th>
-                    <th className="dash-hide-mobile">Menu</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th className="dash-hide-mobile">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><span className="dash-order-id">#001</span></td>
-                    <td>
-                      <div className="dash-customer">
-                        <div className="dash-customer-avatar">J</div>
-                        <span>John Doe</span>
-                      </div>
-                    </td>
-                    <td className="dash-hide-mobile">Cookies, Udang</td>
-                    <td><strong>25K</strong></td>
-                    <td><span className="dash-status dash-status-preparing">Siap</span></td>
-                    <td className="dash-hide-mobile">
-                      <button className="dash-action-btn">Detail</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><span className="dash-order-id">#002</span></td>
-                    <td>
-                      <div className="dash-customer">
-                        <div className="dash-customer-avatar">S</div>
-                        <span>Sarah</span>
-                      </div>
-                    </td>
-                    <td className="dash-hide-mobile">Udang Keju</td>
-                    <td><strong>10K</strong></td>
-                    <td><span className="dash-status dash-status-delivering">Antar</span></td>
-                    <td className="dash-hide-mobile">
-                      <button className="dash-action-btn">Detail</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><span className="dash-order-id">#003</span></td>
-                    <td>
-                      <div className="dash-customer">
-                        <div className="dash-customer-avatar">M</div>
-                        <span>Mike</span>
-                      </div>
-                    </td>
-                    <td className="dash-hide-mobile">Cookies</td>
-                    <td><strong>5K</strong></td>
-                    <td><span className="dash-status dash-status-pending">Tunggu</span></td>
-                    <td className="dash-hide-mobile">
-                      <button className="dash-action-btn">Detail</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                  <Spinner size="lg" />
+                </div>
+              ) : stats && stats.total_orders > 0 ? (
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Pelanggan</th>
+                      <th className="dash-hide-mobile">Menu</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th className="dash-hide-mobile">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                        <p>Belum ada pesanan. Data akan muncul setelah ada transaksi.</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#666', background: '#f9f9f9', border: '3px solid #000' }}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto 20px', opacity: 0.3 }}>
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                  </svg>
+                  <p style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Belum Ada Pesanan</p>
+                  <p style={{ fontSize: '14px' }}>Data pesanan akan muncul setelah ada transaksi dari customer.</p>
+                </div>
+              )}
             </div>
           </motion.div>
 

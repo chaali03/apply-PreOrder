@@ -50,6 +50,36 @@ type Product struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+// Order model
+type Order struct {
+	ID              string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	OrderNumber     string    `gorm:"unique;not null" json:"order_number"`
+	CustomerName    string    `gorm:"not null" json:"customer_name"`
+	CustomerEmail   string    `gorm:"not null" json:"customer_email"`
+	CustomerPhone   string    `gorm:"not null" json:"customer_phone"`
+	DeliveryAddress string    `json:"delivery_address"`
+	Subtotal        float64   `json:"subtotal"`
+	DeliveryFee     float64   `json:"delivery_fee"`
+	Total           float64   `json:"total"`
+	PaymentMethod   string    `json:"payment_method"`
+	PaymentStatus   string    `gorm:"default:'pending'" json:"payment_status"`
+	OrderStatus     string    `gorm:"default:'pending'" json:"order_status"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// Dashboard Stats Response
+type DashboardStats struct {
+	TotalCustomers   int64   `json:"total_customers"`
+	TotalOrders      int64   `json:"total_orders"`
+	TotalRevenue     float64 `json:"total_revenue"`
+	ActiveOrders     int64   `json:"active_orders"`
+	CustomerGrowth   float64 `json:"customer_growth"`
+	OrderGrowth      float64 `json:"order_growth"`
+	RevenueGrowth    float64 `json:"revenue_growth"`
+	ActiveOrdersList []Order `json:"active_orders_list"`
+}
+
 type LoginRequest struct {
 	Email string `json:"email"`
 }
@@ -548,6 +578,81 @@ func main() {
 		return c.JSON(fiber.Map{
 			"success": true,
 			"data":    product,
+		})
+	})
+
+	// Dashboard statistics endpoint
+	app.Get("/api/dashboard/stats", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var stats DashboardStats
+
+		// Total Customers
+		DB.Model(&User{}).Where("role = ?", "customer").Count(&stats.TotalCustomers)
+
+		// Total Orders
+		DB.Model(&Order{}).Count(&stats.TotalOrders)
+
+		// Total Revenue (sum of all completed orders)
+		DB.Model(&Order{}).
+			Where("payment_status = ?", "paid").
+			Select("COALESCE(SUM(total), 0)").
+			Scan(&stats.TotalRevenue)
+
+		// Active Orders (pending, processing, on_delivery)
+		DB.Model(&Order{}).
+			Where("order_status IN ?", []string{"pending", "processing", "on_delivery"}).
+			Count(&stats.ActiveOrders)
+
+		// Get active orders list
+		DB.Where("order_status IN ?", []string{"pending", "processing", "on_delivery"}).
+			Order("created_at DESC").
+			Limit(10).
+			Find(&stats.ActiveOrdersList)
+
+		// Calculate growth percentages (last 7 days vs previous 7 days)
+		now := time.Now()
+		sevenDaysAgo := now.AddDate(0, 0, -7)
+		fourteenDaysAgo := now.AddDate(0, 0, -14)
+
+		// Customer growth
+		var customersLast7, customersPrevious7 int64
+		DB.Model(&User{}).Where("role = ? AND created_at >= ?", "customer", sevenDaysAgo).Count(&customersLast7)
+		DB.Model(&User{}).Where("role = ? AND created_at >= ? AND created_at < ?", "customer", fourteenDaysAgo, sevenDaysAgo).Count(&customersPrevious7)
+		if customersPrevious7 > 0 {
+			stats.CustomerGrowth = float64(customersLast7-customersPrevious7) / float64(customersPrevious7) * 100
+		} else if customersLast7 > 0 {
+			stats.CustomerGrowth = 100
+		}
+
+		// Order growth
+		var ordersLast7, ordersPrevious7 int64
+		DB.Model(&Order{}).Where("created_at >= ?", sevenDaysAgo).Count(&ordersLast7)
+		DB.Model(&Order{}).Where("created_at >= ? AND created_at < ?", fourteenDaysAgo, sevenDaysAgo).Count(&ordersPrevious7)
+		if ordersPrevious7 > 0 {
+			stats.OrderGrowth = float64(ordersLast7-ordersPrevious7) / float64(ordersPrevious7) * 100
+		} else if ordersLast7 > 0 {
+			stats.OrderGrowth = 100
+		}
+
+		// Revenue growth
+		var revenueLast7, revenuePrevious7 float64
+		DB.Model(&Order{}).Where("payment_status = ? AND created_at >= ?", "paid", sevenDaysAgo).Select("COALESCE(SUM(total), 0)").Scan(&revenueLast7)
+		DB.Model(&Order{}).Where("payment_status = ? AND created_at >= ? AND created_at < ?", "paid", fourteenDaysAgo, sevenDaysAgo).Select("COALESCE(SUM(total), 0)").Scan(&revenuePrevious7)
+		if revenuePrevious7 > 0 {
+			stats.RevenueGrowth = (revenueLast7 - revenuePrevious7) / revenuePrevious7 * 100
+		} else if revenueLast7 > 0 {
+			stats.RevenueGrowth = 100
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    stats,
 		})
 	})
 
