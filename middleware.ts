@@ -15,8 +15,26 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
   
-  // If accessing login with token, redirect to dashboard
+  // If accessing login with token, check referer
   if (request.nextUrl.pathname === '/login' && token) {
+    const referer = request.headers.get('referer')
+    
+    // Allow access to login if coming from non-dashboard pages (home, menu, etc)
+    // Only redirect to dashboard if coming from dashboard or no referer
+    if (referer) {
+      const refererUrl = new URL(referer)
+      const isFromDashboard = refererUrl.pathname.startsWith('/dashboard')
+      
+      // If coming from dashboard, redirect back to dashboard
+      if (isFromDashboard) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      
+      // If coming from other pages (home, menu, etc), allow login access
+      return NextResponse.next()
+    }
+    
+    // No referer (direct access), redirect to dashboard
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   
