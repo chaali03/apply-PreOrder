@@ -155,44 +155,6 @@ export default function KurirPage() {
             <p className="kurir-hero-subtitle">
               Pantau status pesanan Anda secara real-time
             </p>
-            {!customerPhone && (
-              <div className="email-input-section">
-                <input
-                  type="tel"
-                  placeholder="Masukkan nomor telepon Anda"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="email-input"
-                />
-                <button
-                  onClick={() => {
-                    if (searchQuery) {
-                      setCustomerPhone(searchQuery);
-                      localStorage.setItem('customerPhone', searchQuery);
-                      setSearchQuery("");
-                    }
-                  }}
-                  className="email-submit-btn"
-                >
-                  Lacak Pesanan
-                </button>
-              </div>
-            )}
-            {customerPhone && (
-              <div className="customer-email-display">
-                <span>No. Telepon: {customerPhone}</span>
-                <button
-                  onClick={() => {
-                    setCustomerPhone("");
-                    localStorage.removeItem('customerPhone');
-                    setOrders([]);
-                  }}
-                  className="change-email-btn"
-                >
-                  Ganti Nomor
-                </button>
-              </div>
-            )}
           </div>
         </section>
 
@@ -252,10 +214,6 @@ export default function KurirPage() {
             {loading ? (
               <div className="loading-state">
                 <p>Memuat pesanan...</p>
-              </div>
-            ) : !customerPhone ? (
-              <div className="no-orders">
-                <p>Masukkan nomor telepon Anda untuk melacak pesanan</p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="no-orders">

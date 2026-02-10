@@ -2,13 +2,44 @@
 
 import CurvedMenu from '../components/ui/curved-menu'
 import MobileMenu from '../components/ui/mobile-menu'
+import { Spinner } from '../components/ui/ios-spinner'
 import Link from 'next/link'
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
+
+interface Product {
+  id: string;
+  name: string;
+  short_description: string;
+  price: number;
+  tag: string;
+  tag_color: string;
+  image_url_1: string;
+  is_available: boolean;
+}
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const targetRef = useRef<HTMLButtonElement>(null);
   const mousePosRef = useRef({ x: null as number | null, y: null as number | null });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products from API
+  useEffect(() => {
+    fetch('http://localhost:8080/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Get only first 2 products for home page
+          setProducts(data.data.slice(0, 2));
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching products:', error);
+        setLoading(false);
+      });
+  }, []);
 
   const drawArrow = useCallback(() => {
     if (!canvasRef.current || !targetRef.current) return;
@@ -146,13 +177,15 @@ export default function Home() {
             Setiap menu disiapkan dengan bahan berkualitas dan perhatian pada detail, untuk menghadirkan rasa yang bisa dinikmati kapan saja.
             </p>
             <div className="flex flex-row gap-6 sm:gap-5" style={{ marginTop: "auto" }}>
-              <button 
-                ref={targetRef}
-                className="btn-cta" 
-                style={{ background: "var(--primary)", color: "white" }}
-              >
-                Order Sekarang
-              </button>
+              <Link href="/menu">
+                <button 
+                  ref={targetRef}
+                  className="btn-cta" 
+                  style={{ background: "var(--primary)", color: "white" }}
+                >
+                  Order Sekarang
+                </button>
+              </Link>
               <Link href="/menu">
                 <button className="btn-cta" style={{ background: "white" }}>
                   Lihat Menu
@@ -194,56 +227,45 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="menu-grid">
-            {/* Item 1 */}
-            <div className="menu-card">
-              <span className="menu-tag">Mantul</span>
-              <img
-                src="/produk/Cookies.jpeg"
-                alt="Cookies"
-              />
-              <div className="menu-card-body">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <h3>Cookies</h3>
-                  <span className="price">Rp 5.000</span>
-                </div>
-                <p style={{ fontSize: "14px", color: "#666" }}>
-                 Cookies panggang maksimal, cokelat lumer, resep rahasia khas kami, empuk dan wangi.
-                </p>
+          <div className="menu-grid" suppressHydrationWarning>
+            {loading ? (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '20px' }}>
+                <Spinner size="lg" />
+                <p style={{ color: '#666', fontSize: '14px', fontWeight: 600 }}>Memuat menu...</p>
               </div>
-            </div>
-
-            {/* Item 2 */}
-            <div className="menu-card">
-              <span className="menu-tag" style={{ background: "var(--secondary)" }}>
-                Wenak
-              </span>
-              <img
-                src="/produk/UdangKeju.jpeg"
-                alt="Udang Keju"
-              />
-              <div className="menu-card-body">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <h3>Udang Keju 3pcs</h3>
-                  <span className="price">Rp 10.000</span>
-                </div>
-                <p style={{ fontSize: "14px", color: "#666" }}>Udang keju dengan isian daging ayam dan udang, dibalut adonan renyah dan keju lumer yang meleleh di setiap gigitan.</p>
+            ) : products.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#666' }}>
+                Belum ada menu tersedia
               </div>
-            </div>
+            ) : (
+              products.map((product) => (
+                <div key={product.id} className="menu-card">
+                  <span className="menu-tag" style={{ background: product.tag_color }}>
+                    {product.tag}
+                  </span>
+                  <img
+                    src={product.image_url_1}
+                    alt={product.name}
+                  />
+                  <div className="menu-card-body">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      <h3>{product.name}</h3>
+                      <span className="price">Rp {product.price.toLocaleString()}</span>
+                    </div>
+                    <p style={{ fontSize: "14px", color: "#666" }}>
+                      {product.short_description}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 

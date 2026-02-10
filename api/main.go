@@ -43,9 +43,9 @@ type Product struct {
 	Category         string    `json:"category"`
 	Tag              string    `json:"tag"`
 	TagColor         string    `json:"tag_color"`
-	ImageURL1        string    `json:"image_url_1"`
-	ImageURL2        string    `json:"image_url_2"`
-	ImageURL3        string    `json:"image_url_3"`
+	ImageURL1        string    `gorm:"column:image_url_1" json:"image_url_1"`
+	ImageURL2        string    `gorm:"column:image_url_2" json:"image_url_2"`
+	ImageURL3        string    `gorm:"column:image_url_3" json:"image_url_3"`
 	Stock            int       `gorm:"default:0" json:"stock"`
 	IsAvailable      bool      `gorm:"default:true" json:"is_available"`
 	CreatedAt        time.Time `json:"created_at"`

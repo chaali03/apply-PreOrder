@@ -388,14 +388,13 @@ export default function DashboardMenuPage() {
             <span>Menu</span>
           </a>
 
-          <a href="/dashboard/customers" className="dash-nav-item">
+          <a href="/dashboard/reports" className="dash-nav-item">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
             </svg>
-            <span>Pelanggan</span>
+            <span>Laporan</span>
           </a>
         </nav>
 
@@ -405,7 +404,7 @@ export default function DashboardMenuPage() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
-            <span>Ke Website</span>
+            <span>Ke Home</span>
           </a>
         </div>
       </aside>
@@ -427,7 +426,7 @@ export default function DashboardMenuPage() {
             <h1 className="dash-title">Kelola Menu</h1>
           </div>
           <button className="btn-add-product" onClick={handleAddProduct}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
@@ -467,7 +466,7 @@ export default function DashboardMenuPage() {
                   )}
                   <div className="product-image-wrapper">
                     <img 
-                      src={product.image_url_1 || '/produk/placeholder.svg'} 
+                      src={product.image_url_1} 
                       alt={product.name}
                       className="product-image-admin"
                     />
@@ -819,7 +818,7 @@ export default function DashboardMenuPage() {
                 </p>
                 <div className="delete-product-info">
                   <img 
-                    src={productToDelete.image_url_1 || '/produk/placeholder.svg'} 
+                    src={productToDelete.image_url_1} 
                     alt={productToDelete.name}
                     className="delete-product-image"
                   />

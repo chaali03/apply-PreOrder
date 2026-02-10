@@ -832,7 +832,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 40;
+  z-index: 9998;
 }
 
 @media (min-width: 1024px) {
@@ -851,9 +851,10 @@
   border-right: 3px solid #1a1a1a;
   display: flex;
   flex-direction: column;
-  z-index: 50;
+  z-index: 9999;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
+  overflow: hidden;
 }
 
 .dash-sidebar-open {
@@ -863,6 +864,7 @@
 @media (min-width: 1024px) {
   .dash-sidebar {
     transform: translateX(0);
+    z-index: 10;
   }
 }
 
@@ -872,6 +874,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .dash-sidebar-close {
@@ -900,6 +903,9 @@
   flex: 1;
   padding: 1.5rem 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .dash-nav-item {
@@ -913,6 +919,7 @@
   transition: all 0.2s;
   border-left: 3px solid transparent;
   font-size: 0.9375rem;
+  flex-shrink: 0;
 }
 
 .dash-nav-item:hover {
@@ -933,6 +940,7 @@
 .dash-sidebar-footer {
   padding: 1rem 0;
   border-top: 2px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .dash-logo-text {

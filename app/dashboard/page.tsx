@@ -146,24 +146,6 @@ export default function DashboardPage() {
             <span>Menu</span>
           </a>
 
-          <a href="/dashboard/customers" className="dash-nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-            <span>Pelanggan</span>
-          </a>
-
-          <a href="/dashboard/finance" className="dash-nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
-            <span>Keuangan</span>
-          </a>
-
           <a href="/dashboard/reports" className="dash-nav-item">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -171,14 +153,6 @@ export default function DashboardPage() {
               <line x1="6" y1="20" x2="6" y2="14"></line>
             </svg>
             <span>Laporan</span>
-          </a>
-
-          <a href="/dashboard/settings" className="dash-nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6"></path>
-            </svg>
-            <span>Pengaturan</span>
           </a>
         </nav>
 

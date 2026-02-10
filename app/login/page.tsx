@@ -3,10 +3,12 @@
 import './login.css';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
   const [step, setStep] = useState<"email" | "code" | "success">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -148,7 +150,12 @@ export default function LoginPage() {
         const data = await response.json();
         
         if (data.success) {
-          // Store token in localStorage
+          // Store token in cookie (expires in 7 days)
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 7);
+          document.cookie = `auth_token=${data.token}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Strict`;
+          
+          // Also store in localStorage as backup
           localStorage.setItem('authToken', data.token);
           setStep("success");
         } else {
@@ -161,7 +168,7 @@ export default function LoginPage() {
   };
 
   const handleGoToDashboard = () => {
-    router.push('/dashboard');
+    router.push(redirectPath);
   };
 
   return (

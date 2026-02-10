@@ -556,12 +556,21 @@
 
 /* Responsive */
 @media (max-width: 640px) {
+  .order-header {
+    padding: 0.75rem 1rem;
+  }
+
   .order-header-title {
     font-size: 1rem;
   }
 
+  .order-content {
+    padding: 1rem;
+  }
+
   .cart-item {
     flex-wrap: wrap;
+    padding: 0.75rem;
   }
 
   .cart-item-image {
@@ -569,10 +578,40 @@
     height: 60px;
   }
 
+  .cart-item-name {
+    font-size: 0.875rem;
+  }
+
+  .cart-item-price {
+    font-size: 0.75rem;
+  }
+
   .cart-item-quantity {
     width: 100%;
     justify-content: center;
     margin-top: 0.5rem;
+  }
+
+  .order-summary {
+    padding: 1rem;
+  }
+
+  .summary-title {
+    font-size: 1rem;
+  }
+
+  .summary-row {
+    font-size: 0.875rem;
+  }
+
+  .summary-total {
+    font-size: 1rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.875rem;
   }
 
   .checkout-actions {
@@ -584,12 +623,97 @@
     flex: 1;
   }
 
+  .form-input,
+  .form-textarea {
+    padding: 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  .payment-method {
+    padding: 1rem;
+  }
+
+  .payment-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .payment-info h3 {
+    font-size: 0.875rem;
+  }
+
+  .payment-info p {
+    font-size: 0.75rem;
+  }
+
+  .payment-details {
+    padding: 1rem;
+  }
+
+  .bank-info {
+    padding: 0.75rem;
+  }
+
+  .bank-info p {
+    font-size: 0.875rem;
+  }
+
   .success-actions {
     flex-direction: column;
   }
 
   .success-title {
     font-size: 1.5rem;
+  }
+
+  .success-message {
+    font-size: 1rem;
+  }
+
+  .order-info {
+    padding: 1rem;
+  }
+
+  .info-row {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-header {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .order-header-title {
+    font-size: 0.875rem;
+  }
+
+  .order-content {
+    padding: 0.75rem;
+  }
+
+  .cart-item {
+    padding: 0.625rem;
+  }
+
+  .order-summary {
+    padding: 0.875rem;
+    margin-top: 1rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .success-icon {
+    width: 80px;
+    height: 80px;
+  }
+
+  .success-title {
+    font-size: 1.25rem;
   }
 }
 

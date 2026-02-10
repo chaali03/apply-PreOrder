@@ -296,21 +296,22 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .delete-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   background: white;
   border: 3px solid #1a1a1a;
   box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
   padding: 2rem;
   max-width: 500px;
   width: 90%;
-  z-index: 101;
+  z-index: 10000;
+  margin: 1rem;
 }
 
 .modal-close-btn {
@@ -431,7 +432,7 @@
   border: 3px solid #1a1a1a;
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
   font-weight: 700;
-  z-index: 1000;
+  z-index: 10001;
   max-width: 90%;
   text-align: center;
 }
@@ -452,22 +453,113 @@
 
   .orders-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .order-card {
+    overflow: hidden;
+  }
+
+  .order-card-header {
+    padding: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .order-number {
+    font-size: 1rem;
+    word-break: break-all;
+  }
+
+  .order-card-body {
+    padding: 1rem;
   }
 
   .order-card-footer {
     flex-direction: column;
+    padding: 1rem;
   }
 
   .status-filters {
     overflow-x: auto;
     flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
   }
 
   .filter-btn {
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .modal-actions {
     flex-direction: column;
+  }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .search-input {
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-card-header {
+    padding: 0.75rem;
+  }
+
+  .order-number {
+    font-size: 0.875rem;
+  }
+
+  .order-date {
+    font-size: 0.75rem;
+  }
+
+  .order-status-badge {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .order-card-body {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .info-row {
+    font-size: 0.75rem;
+  }
+
+  .order-items-section,
+  .order-total-section,
+  .order-address-section {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .order-card-footer {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .status-select,
+  .delete-btn {
+    font-size: 0.75rem;
+    padding: 0.625rem 1rem;
+  }
+
+  .delete-modal {
+    padding: 1.5rem;
+    width: 95%;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+  }
+
+  .modal-message {
+    font-size: 0.875rem;
   }
 }
