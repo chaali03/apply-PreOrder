@@ -22,6 +22,7 @@ interface Product {
   tag_color: string;
   stock: number;
   is_available: boolean;
+  min_order: number;
 }
 
 export default function ProductDetailPage() {
@@ -41,6 +42,10 @@ export default function ProductDetailPage() {
       .then(data => {
         if (data.success) {
           setProduct(data.data);
+          // Set initial quantity to min_order
+          const minOrder = data.data.min_order || 1;
+          setQuantity(minOrder);
+          console.log('Product loaded, min_order:', minOrder);
         }
         setLoading(false);
       })
@@ -49,6 +54,14 @@ export default function ProductDetailPage() {
         setLoading(false);
       });
   }, [productId]);
+
+  // Update quantity when product changes (for navigation between products)
+  useEffect(() => {
+    if (product) {
+      const minOrder = product.min_order || 1;
+      setQuantity(minOrder);
+    }
+  }, [product?.id, product?.min_order]);
 
   // Fetch related products
   useEffect(() => {
@@ -183,8 +196,9 @@ export default function ProductDetailPage() {
                 <label>Jumlah:</label>
                 <div className="quantity-controls">
                   <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    onClick={() => setQuantity(Math.max(product.min_order || 1, quantity - 1))}
                     className="quantity-btn"
+                    disabled={quantity <= (product.min_order || 1)}
                   >
                     -
                   </button>
@@ -196,6 +210,11 @@ export default function ProductDetailPage() {
                     +
                   </button>
                 </div>
+                {product.min_order > 1 && (
+                  <small style={{ color: '#666', fontSize: '13px', marginLeft: '10px' }}>
+                    Min. order: {product.min_order} pcs
+                  </small>
+                )}
               </div>
 
               {/* Total Price */}

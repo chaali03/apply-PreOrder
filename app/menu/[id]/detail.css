@@ -242,8 +242,13 @@
   border-left: var(--border);
 }
 
-.quantity-btn:hover {
+.quantity-btn:hover:not(:disabled) {
   background: var(--accent);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .quantity-value {

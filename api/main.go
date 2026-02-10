@@ -48,6 +48,7 @@ type Product struct {
 	ImageURL3        string    `gorm:"column:image_url_3" json:"image_url_3"`
 	Stock            int       `gorm:"default:0" json:"stock"`
 	IsAvailable      bool      `gorm:"default:true" json:"is_available"`
+	MinOrder         int       `gorm:"default:1" json:"min_order"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
@@ -739,6 +740,9 @@ func main() {
 		}
 		if !product.IsAvailable {
 			product.IsAvailable = true
+		}
+		if product.MinOrder == 0 {
+			product.MinOrder = 1
 		}
 
 		result := DB.Create(&product)

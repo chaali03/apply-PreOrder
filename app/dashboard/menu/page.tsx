@@ -20,6 +20,7 @@ interface Product {
   image_url_3: string;
   stock: number;
   is_available: boolean;
+  min_order: number;
 }
 
 export default function DashboardMenuPage() {
@@ -49,7 +50,8 @@ export default function DashboardMenuPage() {
     image_url_1: "",
     image_url_2: "",
     image_url_3: "",
-    is_available: true
+    is_available: true,
+    min_order: 1
   });
 
   // Fetch products
@@ -186,7 +188,8 @@ export default function DashboardMenuPage() {
       image_url_1: product.image_url_1,
       image_url_2: product.image_url_2,
       image_url_3: product.image_url_3,
-      is_available: product.is_available
+      is_available: product.is_available,
+      min_order: product.min_order || 1
     });
     setShowModal(true);
   };
@@ -591,6 +594,21 @@ export default function DashboardMenuPage() {
                       onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
                       placeholder="5000"
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Minimal Order *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={formData.min_order}
+                      onChange={(e) => setFormData({...formData, min_order: Math.max(1, Number(e.target.value))})}
+                      placeholder="1"
+                    />
+                    <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Jumlah minimal yang harus dipesan customer
+                    </small>
                   </div>
                 </div>
 
