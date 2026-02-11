@@ -30,5 +30,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# pnpm backup (untuk deployment backend)
+# Backup files (untuk deployment backend)
 pnpm-lock.yaml.bak
+package.json.bak
+package-lock.json.bak
