@@ -1,27 +1,60 @@
+# Dockerignore for Koyeb
+
 # Git
 .git
 .gitignore
 
 # Node
 node_modules
+.next
 npm-debug.log
-yarn.lock
+pnpm-lock.yaml
+package.json
+package-lock.json
 
-# Build output
-dist
-build
-.out
-bin
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
 
-# Env & editor
+# Env files
 .env
+.env.local
+.env.production
+
+# IDE
 .vscode
 .idea
-
-# Uploads 
-uploads
-tmp
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Docs
+*.md
+README.md
+
+# Frontend files (not needed for backend)
+app/
+components/
+public/
+styles/
+hooks/
+lib/
+middleware.ts
+next.config.mjs
+tsconfig.json
+postcss.config.mjs
+tailwind.config.ts
+components.json
+
+# Deployment configs
+netlify.toml
+.netlify/
+
+# Scripts
+*.sh

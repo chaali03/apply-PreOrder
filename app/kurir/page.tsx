@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import MobileMenu from '../../components/ui/mobile-menu';
@@ -37,6 +37,14 @@ interface Order {
 }
 
 export default function KurirPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <KurirContent />
+    </Suspense>
+  );
+}
+
+function KurirContent() {
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");

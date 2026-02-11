@@ -13,21 +13,32 @@ import (
 var DB *gorm.DB
 
 func ConnectDb() {
-	// DOCKER ENVIRONMENT CONFIG
-	host := getEnv("DB_HOST", "postgres") 
-	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "postgres")
-	password := getEnv("DB_PASSWORD", "docker123")
-	dbname := getEnv("DB_NAME", "management_preorder")
+	var dsn string
 	
-	log.Printf("🐳 DOCKER: Connecting to %s@%s:%s/%s", user, host, port, dbname)
+	// Check if DATABASE_URL is provided (Render, Heroku, etc)
+	databaseURL := os.Getenv("DATABASE_URL")
 	
-	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		host, user, password, dbname, port,
-	)
+	if databaseURL != "" {
+		// Use DATABASE_URL from cloud provider
+		log.Println("🌐 Using DATABASE_URL from environment")
+		dsn = databaseURL
+	} else {
+		// Use individual environment variables (local development)
+		host := getEnv("DB_HOST", "postgres") 
+		port := getEnv("DB_PORT", "5432")
+		user := getEnv("DB_USER", "postgres")
+		password := getEnv("DB_PASSWORD", "docker123")
+		dbname := getEnv("DB_NAME", "management_preorder")
+		
+		log.Printf("🐳 LOCAL: Connecting to %s@%s:%s/%s", user, host, port, dbname)
+		
+		dsn = fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+			host, user, password, dbname, port,
+		)
+	}
 	
-	// Retry buat docker
+	// Retry connection
 	var db *gorm.DB
 	var err error
 	maxRetries := 25
@@ -35,7 +46,7 @@ func ConnectDb() {
 	for i := 1; i <= maxRetries; i++ {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
-			log.Printf("⏳ Docker DB not ready (attempt %d/%d)...", i, maxRetries)
+			log.Printf("⏳ Database not ready (attempt %d/%d)...", i, maxRetries)
 			time.Sleep(3 * time.Second) 
 			continue
 		}
@@ -43,7 +54,7 @@ func ConnectDb() {
 	}
 	
 	if err != nil {
-		log.Fatal("❌ Failed to connect to Docker database:", err)
+		log.Fatal("❌ Failed to connect to database:", err)
 	}
 	
 	DB = db
@@ -55,15 +66,15 @@ func ConnectDb() {
 	}
 	
 	if err := sqlDB.Ping(); err != nil {
-		log.Fatal("❌ Docker database ping failed:", err)
+		log.Fatal("❌ Database ping failed:", err)
 	}
 	
-	// Configure connection pool untuk Docker
+	// Configure connection pool
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetMaxOpenConns(20)
 	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	
-	log.Println("✅ Connected to Docker PostgreSQL successfully!")
+	log.Println("✅ Connected to PostgreSQL successfully!")
 }
 
 func getEnv(key, defaultValue string) string {
