@@ -745,3 +745,252 @@
   transform: none;
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
 }
+
+
+/* QRIS Payment Styles - Inline with old design */
+.btn-download-qr-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #bff000;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 12px;
+}
+
+.btn-download-qr-inline:hover {
+  background: #a8d600;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(191, 240, 0, 0.3);
+}
+
+.payment-proof-upload {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.proof-instruction-inline {
+  margin: 8px 0 16px 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.upload-area-inline {
+  margin-bottom: 16px;
+}
+
+.upload-label-inline {
+  display: block;
+  cursor: pointer;
+}
+
+.upload-placeholder-inline {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  transition: all 0.2s;
+  background: #f9fafb;
+}
+
+.upload-placeholder-inline:hover {
+  border-color: #bff000;
+  background: #fffef0;
+}
+
+.upload-placeholder-inline svg {
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.upload-placeholder-inline p {
+  margin: 0 0 4px 0;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.upload-placeholder-inline span {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.proof-preview-inline {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 400px;
+  margin: 0 auto;
+  border: 2px solid #e5e7eb;
+}
+
+.proof-preview-inline img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.proof-overlay-inline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.proof-preview-inline:hover .proof-overlay-inline {
+  opacity: 1;
+}
+
+.proof-overlay-inline p {
+  color: white;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Verification Status Inline */
+.verification-status-inline {
+  padding: 14px 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.verification-status-inline.verifying {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+}
+
+.verification-status-inline.valid {
+  background: #d1fae5;
+  border: 1px solid #10b981;
+}
+
+.verification-status-inline.invalid {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+}
+
+.verification-icon-inline {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.verification-status-inline.valid .verification-icon-inline {
+  background: #10b981;
+  color: white;
+}
+
+.verification-status-inline.invalid .verification-icon-inline {
+  background: #ef4444;
+  color: white;
+}
+
+.verification-details-inline {
+  flex: 1;
+}
+
+.verification-message-inline {
+  margin: 0 0 4px 0;
+  color: #111827;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.verification-submessage-inline {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.verification-confidence-inline {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.spinner-inline {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f4f6;
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+.verification-text-inline {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .proof-preview-inline {
+    max-width: 100%;
+  }
+}
+
+
+/* Payment Toggle */
+.payment-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(191, 240, 0, 0.1);
+  color: #000;
+  margin-left: auto;
+}
+
+.payment-method:hover .payment-toggle {
+  background: rgba(191, 240, 0, 0.2);
+}
+
+/* Form Hint */
+.form-hint {
+  margin: 6px 0 0 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* Update order header to accommodate WhatsApp button */
+.order-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.order-header-spacer {
+  width: 48px; /* Same as back button width for centering */
+}
+

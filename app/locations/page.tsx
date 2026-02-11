@@ -9,8 +9,8 @@ export default function LocationsPage() {
   const location = {
     name: "SMK Taruna Bhakti",
     address: "Jl. Raya Bogor KM 28, Cimanggis, Depok, Jawa Barat 16953",
-    phone: "(021) 8740563",
-    hours: "Senin - Jumat: 07:00 - 16:00",
+    phone: "+62 819-1620-3644",
+    hours: "Buka Setiap Hari Operasional TB",
     googleMapsUrl: "https://www.google.com/maps/place/SMK+Taruna+Bhakti/@-6.3644444,106.8644444,17z",
     embedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.8!2d106.8644444!3d-6.3644444!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69ed0b0b0b0b0b%3A0x0!2sSMK%20Taruna%20Bhakti!5e0!3m2!1sen!2sid!4v1234567890"
   };
@@ -208,9 +208,9 @@ export default function LocationsPage() {
           </ul>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 VSCAFF.FOOD GROUP</span>
+          <span>© 2025 SCAFF.FOOD GROUP</span>
           <span>DESIGNED BY MAMAD RPL4</span>
-          <span>IG / TW / TK</span>
+
         </div>
       </footer>
 

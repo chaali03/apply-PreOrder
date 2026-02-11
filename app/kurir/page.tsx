@@ -373,9 +373,9 @@ export default function KurirPage() {
           </ul>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 VSCAFF.FOOD GROUP</span>
+          <span>© 2025 SCAFF.FOOD GROUP</span>
           <span>DESIGNED BY MAMAD RPL4</span>
-          <span>IG / TW / TK</span>
+
         </div>
       </footer>
 

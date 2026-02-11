@@ -1282,6 +1282,194 @@ func main() {
 		})
 	})
 
+	// ============================================
+	// SETTINGS ENDPOINTS
+	// ============================================
+
+	// Get setting by key
+	app.Get("/api/settings", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		key := c.Query("key")
+		if key == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Key parameter is required",
+			})
+		}
+
+		var setting struct {
+			ID          string    `json:"id"`
+			Key         string    `json:"key"`
+			Value       string    `json:"value"`
+			Description string    `json:"description"`
+			CreatedAt   time.Time `json:"created_at"`
+			UpdatedAt   time.Time `json:"updated_at"`
+		}
+
+		err := DB.Raw("SELECT id, key, value, description, created_at, updated_at FROM settings WHERE key = ?", key).Scan(&setting).Error
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Setting not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    setting,
+		})
+	})
+
+	// Update setting
+	app.Put("/api/settings", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var requestData struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+
+		if err := c.BodyParser(&requestData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		if requestData.Key == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Key is required",
+			})
+		}
+
+		// Upsert setting
+		result := DB.Exec(`
+			INSERT INTO settings (key, value, updated_at) 
+			VALUES (?, ?, CURRENT_TIMESTAMP)
+			ON CONFLICT (key) 
+			DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP
+		`, requestData.Key, requestData.Value, requestData.Value)
+
+		if result.Error != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update setting",
+			})
+		}
+
+		log.Printf("✅ Setting updated: %s", requestData.Key)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Setting updated successfully",
+		})
+	})
+
+	// ============================================
+	// REPORT ENDPOINTS
+	// ============================================
+
+	// Get financial report
+	app.Get("/api/reports", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		startDate := c.Query("start_date")
+		endDate := c.Query("end_date")
+
+		if startDate == "" {
+			startDate = time.Now().AddDate(0, 0, -30).Format("2006-01-02")
+		}
+		if endDate == "" {
+			endDate = time.Now().Format("2006-01-02")
+		}
+
+		type ProductSales struct {
+			ProductID     string  `json:"product_id"`
+			ProductName   string  `json:"product_name"`
+			TotalQuantity int     `json:"total_quantity"`
+			TotalRevenue  float64 `json:"total_revenue"`
+			OrderCount    int     `json:"order_count"`
+		}
+
+		type DailySales struct {
+			Date    string  `json:"date"`
+			Revenue float64 `json:"revenue"`
+			Orders  int     `json:"orders"`
+		}
+
+		type ReportData struct {
+			TotalRevenue       float64        `json:"total_revenue"`
+			TotalOrders        int            `json:"total_orders"`
+			TotalProductsSold  int            `json:"total_products_sold"`
+			AverageOrderValue  float64        `json:"average_order_value"`
+			ProductSales       []ProductSales `json:"product_sales"`
+			DailySales         []DailySales   `json:"daily_sales"`
+		}
+
+		report := ReportData{}
+
+		// Get total revenue and orders
+		DB.Model(&Order{}).
+			Where("payment_status = ? AND DATE(created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Select("COALESCE(SUM(total), 0) as total_revenue, COUNT(*) as total_orders").
+			Scan(&report)
+
+		// Get total products sold
+		DB.Table("order_items").
+			Joins("JOIN orders ON order_items.order_id = orders.id").
+			Where("orders.payment_status = ? AND DATE(orders.created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Select("COALESCE(SUM(order_items.quantity), 0)").
+			Scan(&report.TotalProductsSold)
+
+		// Calculate average order value
+		if report.TotalOrders > 0 {
+			report.AverageOrderValue = report.TotalRevenue / float64(report.TotalOrders)
+		}
+
+		// Get product sales
+		var productSales []ProductSales
+		DB.Table("products").
+			Select("products.id as product_id, products.name as product_name, COALESCE(SUM(order_items.quantity), 0) as total_quantity, COALESCE(SUM(order_items.subtotal), 0) as total_revenue, COUNT(DISTINCT orders.id) as order_count").
+			Joins("LEFT JOIN order_items ON products.id = order_items.product_id").
+			Joins("LEFT JOIN orders ON order_items.order_id = orders.id AND orders.payment_status = ? AND DATE(orders.created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Group("products.id, products.name").
+			Having("COALESCE(SUM(order_items.quantity), 0) > 0").
+			Order("total_revenue DESC").
+			Scan(&productSales)
+		report.ProductSales = productSales
+
+		// Get daily sales
+		var dailySales []DailySales
+		DB.Table("orders").
+			Select("DATE(created_at) as date, COALESCE(SUM(total), 0) as revenue, COUNT(*) as orders").
+			Where("payment_status = ? AND DATE(created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Group("DATE(created_at)").
+			Order("date ASC").
+			Scan(&dailySales)
+		report.DailySales = dailySales
+
+		log.Printf("📊 Report generated: %s to %s", startDate, endDate)
+
+		return c.JSON(report)
+	})
+
 	// Start server
 	port := getEnv("PORT", "8080")
 	log.Printf("🚀 Server starting on http://localhost:%s", port)

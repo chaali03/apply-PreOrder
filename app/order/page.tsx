@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import QRCode from 'qrcode';
 import './order.css';
 
 interface CartItem {
@@ -56,7 +57,122 @@ export default function OrderPage() {
     notes: ""
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer" | "qris">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"qris">("qris");
+  const [paymentProof, setPaymentProof] = useState<string>("");
+  const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<{
+    isValid: boolean;
+    message: string;
+    confidence: number;
+  } | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(true);
+
+  // Calculate totals
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const deliveryFee = 0;
+  const total = subtotal;
+
+  // Generate QR Code
+  useEffect(() => {
+    if (step === "payment") {
+      fetchQRISImage();
+    }
+  }, [step]);
+
+  const fetchQRISImage = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/settings?key=qris_image');
+      const data = await response.json();
+      
+      if (data.success && data.data.value) {
+        setQrCodeUrl(data.data.value);
+      } else {
+        // Fallback: generate QR if no image in database
+        const qrisData = `00020101021226670016ID.CO.QRIS.WWW0118ID${Date.now()}0215ID10SCAFFFOOD0303UMI51440014ID.CO.QRIS.WWW02180000000000000000000303UMI5204599953033605802ID5913SCAFF*FOOD6007JAKARTA61051234062070703A0163044B3D`;
+        
+        QRCode.toDataURL(qrisData, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        }).then(url => {
+          setQrCodeUrl(url);
+        }).catch(err => {
+          console.error('Error generating QR code:', err);
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching QRIS:', error);
+    }
+  };
+
+  const downloadQR = () => {
+    if (qrCodeUrl) {
+      const link = document.createElement('a');
+      link.download = `QRIS-SCAFFFOOD-${Date.now()}.png`;
+      link.href = qrCodeUrl;
+      link.click();
+    }
+  };
+
+  const handlePaymentProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setNotificationMessage('File harus berupa gambar');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPaymentProof(reader.result as string);
+      verifyPaymentProof(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const verifyPaymentProof = async (imageData: string) => {
+    setVerifying(true);
+    setVerificationResult(null);
+
+    try {
+      // Simulate AI verification (in production, call actual AI API)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Mock AI analysis
+      const mockAnalysis = {
+        isValid: Math.random() > 0.3, // 70% success rate for demo
+        message: Math.random() > 0.3 
+          ? `Bukti pembayaran terverifikasi. Nominal sesuai: Rp ${total.toLocaleString('id-ID')}`
+          : 'Bukti pembayaran tidak valid. Nominal tidak sesuai atau gambar hasil edit.',
+        confidence: Math.random() * 30 + 70 // 70-100%
+      };
+
+      setVerificationResult(mockAnalysis);
+
+      if (!mockAnalysis.isValid) {
+        setNotificationMessage(mockAnalysis.message);
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 5000);
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      setVerificationResult({
+        isValid: false,
+        message: 'Gagal memverifikasi bukti pembayaran',
+        confidence: 0
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
   const [submitting, setSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [showNotification, setShowNotification] = useState(false);
@@ -101,10 +217,6 @@ export default function OrderPage() {
     }
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = 5000;
-  const total = subtotal + deliveryFee;
-
   const handleCheckout = () => {
     if (customerInfo.name && customerInfo.phone && customerInfo.address) {
       setStep("payment");
@@ -116,6 +228,20 @@ export default function OrderPage() {
   };
 
   const handlePayment = async () => {
+    if (!paymentProof) {
+      setNotificationMessage("Mohon upload bukti pembayaran");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
+
+    if (!verificationResult || !verificationResult.isValid) {
+      setNotificationMessage("Bukti pembayaran tidak valid atau belum diverifikasi");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
+
     setSubmitting(true);
     
     try {
@@ -123,13 +249,13 @@ export default function OrderPage() {
       const orderData = {
         order: {
           customer_name: customerInfo.name,
-          customer_email: `${customerInfo.phone}@phone.local`, // Generate dummy email from phone
+          customer_email: `${customerInfo.phone}@phone.local`,
           customer_phone: customerInfo.phone,
           delivery_address: customerInfo.address,
           subtotal: subtotal,
-          delivery_fee: deliveryFee,
+          delivery_fee: 0,
           total: total,
-          payment_method: paymentMethod,
+          payment_method: "qris",
           payment_status: "paid",
           order_status: "processing"
         },
@@ -262,10 +388,6 @@ export default function OrderPage() {
                         <span>Subtotal</span>
                         <span>Rp {subtotal.toLocaleString()}</span>
                       </div>
-                      <div className="summary-row">
-                        <span>Biaya Pengiriman</span>
-                        <span>Rp {deliveryFee.toLocaleString()}</span>
-                      </div>
                       <div className="summary-row summary-total">
                         <span>Total</span>
                         <span>Rp {total.toLocaleString()}</span>
@@ -309,8 +431,13 @@ export default function OrderPage() {
                     className="form-input"
                     placeholder="08xxxxxxxxxx"
                     value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                      setCustomerInfo({...customerInfo, phone: value});
+                    }}
+                    maxLength={15}
                   />
+                  <p className="form-hint">Hanya angka, contoh: 081234567890</p>
                 </div>
 
                 <div className="form-group">
@@ -343,10 +470,6 @@ export default function OrderPage() {
                       <span>Rp {(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   ))}
-                  <div className="summary-row">
-                    <span>Biaya Pengiriman</span>
-                    <span>Rp {deliveryFee.toLocaleString()}</span>
-                  </div>
                   <div className="summary-row summary-total">
                     <span>Total</span>
                     <span>Rp {total.toLocaleString()}</span>
@@ -379,50 +502,13 @@ export default function OrderPage() {
               className="order-step"
             >
               <div className="payment-section">
-                <h2 className="section-title">Pilih Metode Pembayaran</h2>
+                <h2 className="section-title">Pembayaran QRIS</h2>
                 
                 <div className="payment-methods">
                   <div 
-                    className={`payment-method ${paymentMethod === "cash" ? "active" : ""}`}
-                    onClick={() => setPaymentMethod("cash")}
-                  >
-                    <div className="payment-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                      </svg>
-                    </div>
-                    <div className="payment-info">
-                      <h3>Cash on Delivery</h3>
-                      <p>Bayar saat pesanan tiba</p>
-                    </div>
-                    <div className="payment-check">
-                      {paymentMethod === "cash" && "✓"}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`payment-method ${paymentMethod === "transfer" ? "active" : ""}`}
-                    onClick={() => setPaymentMethod("transfer")}
-                  >
-                    <div className="payment-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                        <line x1="1" y1="10" x2="23" y2="10"></line>
-                      </svg>
-                    </div>
-                    <div className="payment-info">
-                      <h3>Transfer Bank</h3>
-                      <p>BCA, Mandiri, BNI, BRI</p>
-                    </div>
-                    <div className="payment-check">
-                      {paymentMethod === "transfer" && "✓"}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`payment-method ${paymentMethod === "qris" ? "active" : ""}`}
-                    onClick={() => setPaymentMethod("qris")}
+                    className="payment-method active"
+                    onClick={() => setShowPaymentDetails(!showPaymentDetails)}
+                    style={{ cursor: 'pointer' }}
                   >
                     <div className="payment-icon">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -436,49 +522,55 @@ export default function OrderPage() {
                       <h3>QRIS</h3>
                       <p>Scan QR untuk bayar</p>
                     </div>
-                    <div className="payment-check">
-                      {paymentMethod === "qris" && "✓"}
+                    <div className="payment-toggle">
+                      <svg 
+                        width="20" 
+                        height="20" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2"
+                        style={{ 
+                          transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.3s'
+                        }}
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
                     </div>
                   </div>
                 </div>
 
-                {paymentMethod === "transfer" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="payment-details"
-                  >
-                    <h3 className="details-title">Informasi Transfer</h3>
-                    <div className="bank-info">
-                      <p><strong>Bank BCA</strong></p>
-                      <p>No. Rekening: 1234567890</p>
-                      <p>a.n. SCAFF FOOD</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {paymentMethod === "qris" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="payment-details"
-                  >
-                    <h3 className="details-title">Scan QR Code</h3>
-                    <div className="qris-code">
-                      <div className="qr-image-container">
-                        <img 
-                          src="/qris-code.jpg" 
-                          alt="QRIS Code" 
-                          className="qr-image"
-                          onError={(e) => {
-                            // Fallback jika gambar tidak ada
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const placeholder = target.nextElementSibling as HTMLElement;
-                            if (placeholder) placeholder.style.display = 'flex';
-                          }}
-                        />
-                        <div className="qr-placeholder" style={{ display: 'none' }}>
+                <AnimatePresence>
+                  {showPaymentDetails && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="payment-details"
+                    >
+                  <h3 className="details-title">Scan QR Code</h3>
+                  <div className="qris-code">
+                    <div className="qr-image-container">
+                      {qrCodeUrl ? (
+                        <>
+                          <img 
+                            src={qrCodeUrl} 
+                            alt="QRIS Code" 
+                            className="qr-image"
+                          />
+                          <button onClick={downloadQR} className="btn-download-qr-inline">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="7 10 12 15 17 10"></polyline>
+                              <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download QR
+                          </button>
+                        </>
+                      ) : (
+                        <div className="qr-placeholder">
                           <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
                             <rect x="3" y="3" width="7" height="7"></rect>
                             <rect x="14" y="3" width="7" height="7"></rect>
@@ -486,24 +578,95 @@ export default function OrderPage() {
                             <rect x="3" y="14" width="7" height="7"></rect>
                           </svg>
                           <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                            Upload foto QRIS ke /public/qris-code.jpg
+                            Generating QR Code...
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="qris-instruction">Scan dengan aplikasi pembayaran Anda</p>
+                    <div className="qris-apps">
+                      <span className="qris-app-badge">GoPay</span>
+                      <span className="qris-app-badge">OVO</span>
+                      <span className="qris-app-badge">Dana</span>
+                      <span className="qris-app-badge">ShopeePay</span>
+                    </div>
+                    <div className="qris-amount">
+                      <p>Total Pembayaran</p>
+                      <h3>Rp {total.toLocaleString()}</h3>
+                    </div>
+                  </div>
+
+                  {/* Upload Bukti Pembayaran */}
+                  <div className="payment-proof-upload">
+                    <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
+                    <p className="proof-instruction-inline">Setelah melakukan pembayaran, upload bukti transfer untuk verifikasi otomatis dengan AI</p>
+                    
+                    <div className="upload-area-inline">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePaymentProofUpload}
+                        id="payment-proof"
+                        style={{ display: 'none' }}
+                      />
+                      <label htmlFor="payment-proof" className="upload-label-inline">
+                        {paymentProof ? (
+                          <div className="proof-preview-inline">
+                            <img src={paymentProof} alt="Bukti Pembayaran" />
+                            <div className="proof-overlay-inline">
+                              <p>Klik untuk ganti gambar</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="upload-placeholder-inline">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                              <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            <p>Klik untuk upload bukti pembayaran</p>
+                            <span>PNG, JPG, JPEG (Max 5MB)</span>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+
+                    {verifying && (
+                      <div className="verification-status-inline verifying">
+                        <div className="spinner-inline"></div>
+                        <div className="verification-text-inline">
+                          <p className="verification-message-inline">Memverifikasi bukti pembayaran dengan AI...</p>
+                          <p className="verification-submessage-inline">Mohon tunggu sebentar</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {verificationResult && (
+                      <div className={`verification-status-inline ${verificationResult.isValid ? 'valid' : 'invalid'}`}>
+                        <div className="verification-icon-inline">
+                          {verificationResult.isValid ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          )}
+                        </div>
+                        <div className="verification-details-inline">
+                          <p className="verification-message-inline">{verificationResult.message}</p>
+                          <p className="verification-confidence-inline">
+                            AI Confidence: {verificationResult.confidence.toFixed(1)}%
                           </p>
                         </div>
                       </div>
-                      <p className="qris-instruction">Scan dengan aplikasi pembayaran Anda</p>
-                      <div className="qris-apps">
-                        <span className="qris-app-badge">GoPay</span>
-                        <span className="qris-app-badge">OVO</span>
-                        <span className="qris-app-badge">Dana</span>
-                        <span className="qris-app-badge">ShopeePay</span>
-                      </div>
-                      <div className="qris-amount">
-                        <p>Total Pembayaran</p>
-                        <h3>Rp {total.toLocaleString()}</h3>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                    )}
+                  </div>
+                </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="order-summary">
                   <div className="summary-row summary-total">
@@ -516,7 +679,11 @@ export default function OrderPage() {
                   <button onClick={() => setStep("checkout")} className="btn-secondary" disabled={submitting}>
                     Kembali
                   </button>
-                  <button onClick={handlePayment} className="btn-primary" disabled={submitting}>
+                  <button 
+                    onClick={handlePayment} 
+                    className="btn-primary" 
+                    disabled={submitting || !verificationResult?.isValid}
+                  >
                     {submitting ? "Memproses..." : "Konfirmasi Pembayaran"}
                   </button>
                 </div>
@@ -560,11 +727,7 @@ export default function OrderPage() {
                   </div>
                   <div className="info-row">
                     <span>Metode Pembayaran</span>
-                    <strong>
-                      {paymentMethod === "cash" && "Cash on Delivery"}
-                      {paymentMethod === "transfer" && "Transfer Bank"}
-                      {paymentMethod === "qris" && "QRIS"}
-                    </strong>
+                    <strong>QRIS</strong>
                   </div>
                   <div className="info-row">
                     <span>Estimasi Pengiriman</span>

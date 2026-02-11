@@ -82,14 +82,15 @@ export default function MenuPage() {
           <Link href="/kurir">Kurir</Link>
           <Link href="/locations">Locations</Link>
         </nav>
-        <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
-          <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
-            Login Admin
-          </Link>
-        </button>
+        <div className="header-actions">
+          <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px" }}>
+            <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+              Login Admin
+            </Link>
+          </button>
+        </div>
         <MobileMenu />
       </header>
-
       <main>
         {/* Hero Section */}
         <section className="menu-hero">
@@ -207,7 +208,14 @@ export default function MenuPage() {
         <section className="menu-cta-section">
           <h2 className="menu-cta-title">Belum Menemukan yang Cocok?</h2>
           <p className="menu-cta-text">Hubungi kami untuk request menu spesial!</p>
-          <button className="menu-cta-btn">Hubungi Kami</button>
+          <a 
+            href="https://wa.me/6281916203664?text=Halo%20SCAFF*FOOD,%20saya%20ingin%20request%20menu%20spesial" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="menu-cta-btn"
+          >
+            Hubungi Kami
+          </a>
         </section>
       </main>
 
@@ -234,9 +242,9 @@ export default function MenuPage() {
           </ul>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 VSCAFF.FOOD GROUP</span>
+          <span>© 2025 SCAFF.FOOD GROUP</span>
           <span>DESIGNED BY MAMAD RPL4</span>
-          <span>IG / TW / TK</span>
+
         </div>
       </footer>
 
