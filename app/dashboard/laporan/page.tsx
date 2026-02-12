@@ -67,7 +67,7 @@ export default function LaporanPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:8080/api/reports?start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reports?start_date=${dateRange.start}&end_date=${dateRange.end}`
       );
       const data = await response.json();
       
@@ -304,6 +304,16 @@ export default function LaporanPage() {
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
             <span>Menu</span>
+          </a>
+
+          <a href="/dashboard/qris" className="dash-nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>QRIS</span>
           </a>
 
           <a href="/dashboard/laporan" className="dash-nav-item dash-nav-item-active">

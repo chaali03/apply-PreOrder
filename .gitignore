@@ -34,3 +34,4 @@ next-env.d.ts
 pnpm-lock.yaml.bak
 package.json.bak
 package-lock.json.bak
+.vercel

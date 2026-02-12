@@ -5,6 +5,7 @@ import MobileMenu from '../components/ui/mobile-menu'
 import { Spinner } from '../components/ui/ios-spinner'
 import Link from 'next/link'
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { fetchAPI, getApiBaseUrl } from '@/lib/fetch-api'
 
 interface Product {
   id: string;
@@ -23,22 +24,23 @@ export default function Home() {
   const mousePosRef = useRef({ x: null as number | null, y: null as number | null });
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiBase, setApiBase] = useState('');
 
-  // Fetch products from API
   useEffect(() => {
-    fetch('http://localhost:8080/api/products')
+    getApiBaseUrl().then(setApiBase);
+  }, []);
+
+  // Fetch products from API (pakai runtime config dari /config.json)
+  useEffect(() => {
+    fetchAPI('/api/products')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          // Get only first 2 products for home page
-          setProducts(data.data.slice(0, 2));
+          setProducts(data.data.slice(0, 3));
         }
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error fetching products:', error);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
   const drawArrow = useCallback(() => {
@@ -244,8 +246,12 @@ export default function Home() {
                     {product.tag}
                   </span>
                   <img
-                    src={product.image_url_1 || '/produk/placeholder.svg'}
+                    src={product.image_url_1 ? (product.image_url_1.startsWith('http') ? product.image_url_1 : `${apiBase}${product.image_url_1}`) : '/produk/placeholder.svg'}
                     alt={product.name}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/produk/placeholder.svg';
+                    }}
                   />
                   <div className="menu-card-body">
                     <div
@@ -285,29 +291,42 @@ export default function Home() {
           </h2>
           <div className="social-grid">
             <div className="social-item">
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 font-bold">
-                FAIHA
-              </div>
+              <img 
+                src="/kelompok/faiha.jpeg" 
+                alt="FAIHA" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div className="social-item" style={{ position: 'relative' }}>
+              <img 
+                src="/kelompok/firas.jpeg" 
+                alt="FIRAS" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div className="ribbon-tag">KEBO</div>
+            </div>
+            <div className="social-item" style={{ position: 'relative' }}>
+              <img 
+                src="/kelompok/mamad.jpeg" 
+                alt="MAMAD" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div className="ribbon-tag">HOMO</div>
             </div>
             <div className="social-item">
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 font-bold">
-                FIRAS
-              </div>
+              <img 
+                src="/kelompok/chika.jpeg" 
+                alt="CHIKA" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
-            <div className="social-item">
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 font-bold">
-                MAMAD
-              </div>
-            </div>
-            <div className="social-item">
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 font-bold">
-                CHIKA
-              </div>
-            </div>
-            <div className="social-item">
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 font-bold">
-                SATRIO
-              </div>
+            <div className="social-item" style={{ position: 'relative' }}>
+              <img 
+                src="/kelompok/satrio.jpeg" 
+                alt="SATRIO" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div className="ribbon-tag">ITEM</div>
             </div>
           </div>
         </section>

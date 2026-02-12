@@ -1,0 +1,4 @@
+{
+  "apiUrl": "https://consistent-also-buddy-nine.trycloudflare.com",
+  "_comment": "Ubah apiUrl ke URL Cloudflare Tunnel terbaru (dari cloudflared tunnel --url http://localhost:8080), lalu push & redeploy Vercel"
+}

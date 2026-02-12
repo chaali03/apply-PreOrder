@@ -3,7 +3,7 @@ package product
 import "time"
 
 type Product struct {
-	ID        uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	ID        string    `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	Name      string    `json:"name" gorm:"not null"`
 	Desc      string    `json:"desc"`
 	Quantity  int       `json:"quantity" gorm:"default:1"`

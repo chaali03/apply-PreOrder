@@ -45,7 +45,7 @@ function LoginContent() {
     e.preventDefault();
     if (email) {
       try {
-        const response = await fetch('http://localhost:8080/api/auth/send-code', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ function LoginContent() {
     if (!canResend) return;
     
     try {
-      const response = await fetch('http://localhost:8080/api/auth/send-code', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ function LoginContent() {
       const codeString = code.join("");
       
       try {
-        const response = await fetch('http://localhost:8080/api/auth/verify-code', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -178,6 +178,17 @@ function LoginContent() {
   const handleGoToDashboard = () => {
     router.push(redirectPath);
   };
+
+  // Setelah login sukses, auto-redirect ke dashboard tanpa harus klik tombol
+  useEffect(() => {
+    if (step === "success") {
+      const timeoutId = setTimeout(() => {
+        router.push(redirectPath);
+      }, 500); // redirect cepat setelah animasi
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [step, router, redirectPath]);
 
   return (
     <div className="login-container">

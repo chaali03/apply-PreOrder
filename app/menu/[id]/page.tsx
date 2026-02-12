@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import MobileMenu from '../../../components/ui/mobile-menu';
 import CurvedMenu from '../../../components/ui/curved-menu';
 import { Spinner } from '../../../components/ui/ios-spinner';
+import { fetchAPI } from '@/lib/fetch-api';
 import './detail.css';
 
 interface Product {
@@ -35,24 +36,18 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
-  // Fetch product detail
+  // Fetch product detail (pakai runtime config dari /config.json)
   useEffect(() => {
-    fetch(`http://localhost:8080/api/products/${productId}`)
+    fetchAPI(`/api/products/${productId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setProduct(data.data);
-          // Set initial quantity to min_order
-          const minOrder = data.data.min_order || 1;
-          setQuantity(minOrder);
-          console.log('Product loaded, min_order:', minOrder);
+          setQuantity(data.data.min_order || 1);
         }
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error fetching product:', error);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, [productId]);
 
   // Update quantity when product changes (for navigation between products)
@@ -65,7 +60,7 @@ export default function ProductDetailPage() {
 
   // Fetch related products
   useEffect(() => {
-    fetch('http://localhost:8080/api/products')
+    fetchAPI('/api/products')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -73,9 +68,7 @@ export default function ProductDetailPage() {
           setRelatedProducts(filtered);
         }
       })
-      .catch(error => {
-        console.error('Error fetching related products:', error);
-      });
+      .catch(() => {});
   }, [productId]);
 
   if (loading) {

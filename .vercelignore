@@ -1,0 +1,15 @@
+# Ignore backend API folder
+api/
+
+# Ignore database files
+*.sql
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Ignore scripts
+*.sh
+
+# Ignore documentation
+*.md
+!README.md

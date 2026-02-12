@@ -26,8 +26,10 @@ interface Order {
   total: number;
   payment_method: string;
   payment_status: string;
+  payment_proof?: string;
   order_status: string;
   delivery_photo?: string;
+  appreciation_message?: string;
   cancellation_reason?: string;
   cancelled_at?: string;
   created_at: string;
@@ -51,7 +53,10 @@ export default function DashboardOrdersPage() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [orderToComplete, setOrderToComplete] = useState<Order | null>(null);
   const [deliveryPhoto, setDeliveryPhoto] = useState<string>("");
+  const [appreciationMessage, setAppreciationMessage] = useState<string>("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showPaymentProofModal, setShowPaymentProofModal] = useState(false);
+  const [selectedPaymentProof, setSelectedPaymentProof] = useState<string>("");
 
   useEffect(() => {
     fetchOrders();
@@ -59,7 +64,7 @@ export default function DashboardOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/orders');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`);
       const data = await response.json();
       
       if (data.success) {
@@ -105,7 +110,7 @@ export default function DashboardOrdersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -135,7 +140,7 @@ export default function DashboardOrdersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${orderToCancel.id}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToCancel.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -207,13 +212,19 @@ export default function DashboardOrdersPage() {
       return;
     }
 
+    if (!appreciationMessage.trim()) {
+      showNotif('Pesan apresiasi harus diisi');
+      return;
+    }
+
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${orderToComplete.id}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToComplete.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           status: 'completed',
-          delivery_photo: deliveryPhoto
+          delivery_photo: deliveryPhoto,
+          appreciation_message: appreciationMessage
         })
       });
 
@@ -232,6 +243,7 @@ export default function DashboardOrdersPage() {
         setShowPhotoModal(false);
         setOrderToComplete(null);
         setDeliveryPhoto('');
+        setAppreciationMessage('');
       } else {
         showNotif(data.message || 'Gagal menyelesaikan pesanan');
       }
@@ -245,7 +257,7 @@ export default function DashboardOrdersPage() {
     if (!orderToDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${orderToDelete.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToDelete.id}`, {
         method: 'DELETE'
       });
 
@@ -356,6 +368,16 @@ export default function DashboardOrdersPage() {
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
             <span>Menu</span>
+          </a>
+
+          <a href="/dashboard/qris" className="dash-nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>QRIS</span>
           </a>
 
           <a href="/dashboard/laporan" className="dash-nav-item">
@@ -550,6 +572,34 @@ export default function DashboardOrdersPage() {
                   </div>
 
                   <div className="order-card-footer">
+                    {order.payment_proof && (
+                      <button
+                        onClick={() => {
+                          setSelectedPaymentProof(`${process.env.NEXT_PUBLIC_API_URL}${order.payment_proof}`);
+                          setShowPaymentProofModal(true);
+                        }}
+                        className="btn-view-proof"
+                        style={{
+                          padding: '8px 16px',
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        Lihat Bukti Bayar
+                      </button>
+                    )}
                     <select
                       value={order.order_status}
                       onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
@@ -758,99 +808,109 @@ export default function DashboardOrdersPage() {
             onClick={() => {
               setShowPhotoModal(false);
               setDeliveryPhoto('');
+              setAppreciationMessage('');
             }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="delete-modal"
+              className="documentation-modal"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => {
                   setShowPhotoModal(false);
                   setDeliveryPhoto('');
+                  setAppreciationMessage('');
                 }}
                 className="modal-close-btn"
               >
                 ×
               </button>
 
-              <div className="modal-icon-success">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
+              {/* Header Section */}
+              <div className="doc-modal-header">
+                <div className="doc-header-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                </div>
+                <h2 className="doc-modal-title">Dokumentasi Pengiriman</h2>
+                <p className="doc-modal-subtitle">
+                  Pesanan <span className="order-highlight">{orderToComplete.order_number}</span>
+                </p>
               </div>
 
-              <h2 className="modal-title">Dokumentasi Pengiriman</h2>
-              <p className="modal-message">
-                Upload foto bukti pengiriman untuk pesanan <strong>{orderToComplete.order_number}</strong>
-              </p>
-
-              <div className="modal-order-info">
-                <p><strong>Customer:</strong> {orderToComplete.customer_name}</p>
-                <p><strong>Alamat:</strong> {orderToComplete.delivery_address}</p>
+              {/* Customer Info Card */}
+              <div className="doc-customer-card">
+                <div className="customer-info-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <div>
+                    <span className="info-label">Customer</span>
+                    <span className="info-value">{orderToComplete.customer_name}</span>
+                  </div>
+                </div>
+                <div className="customer-info-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <div>
+                    <span className="info-label">Alamat Pengiriman</span>
+                    <span className="info-value">{orderToComplete.delivery_address}</span>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label 
-                  htmlFor="photo-upload"
-                  style={{ 
-                    display: 'block', 
-                    width: '100%',
-                    padding: '40px 20px',
-                    border: '2px dashed #1a1a1a',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: deliveryPhoto ? '#f0f0f0' : 'white',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
+              {/* Photo Upload Section */}
+              <div className="doc-form-section">
+                <label className="doc-form-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  Foto Dokumentasi
+                  <span className="required-badge">Wajib</span>
+                </label>
+                
+                <label htmlFor="photo-upload" className="photo-upload-area">
                   {uploadingPhoto ? (
-                    <div>Memproses foto...</div>
+                    <div className="upload-loading">
+                      <div className="spinner-small"></div>
+                      <p>Memproses foto...</p>
+                    </div>
                   ) : deliveryPhoto ? (
-                    <div>
-                      <img 
-                        src={deliveryPhoto} 
-                        alt="Preview" 
-                        style={{ 
-                          maxWidth: '100%', 
-                          maxHeight: '200px',
-                          objectFit: 'contain'
-                        }} 
-                      />
-                      <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-                        Klik untuk ganti foto
-                      </p>
+                    <div className="photo-preview">
+                      <img src={deliveryPhoto} alt="Preview" />
+                      <div className="photo-overlay">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        <span>Klik untuk ganti foto</span>
+                      </div>
                     </div>
                   ) : (
-                    <div>
-                      <svg 
-                        width="48" 
-                        height="48" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2"
-                        style={{ margin: '0 auto 10px' }}
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                      </svg>
-                      <p style={{ fontWeight: 600, marginBottom: '5px' }}>
-                        Klik untuk upload foto
-                      </p>
-                      <p style={{ fontSize: '12px', color: '#666' }}>
-                        Atau ambil foto menggunakan kamera
-                      </p>
-                      <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
-                        Max 5MB • JPG, PNG
-                      </p>
+                    <div className="upload-placeholder">
+                      <div className="upload-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                          <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                      </div>
+                      <p className="upload-title">Upload Foto Pengiriman</p>
+                      <p className="upload-subtitle">Klik atau ambil foto menggunakan kamera</p>
+                      <div className="upload-specs">
+                        <span>JPG, PNG</span>
+                        <span>•</span>
+                        <span>Max 5MB</span>
+                      </div>
                     </div>
                   )}
                   <input
@@ -864,27 +924,103 @@ export default function DashboardOrdersPage() {
                 </label>
               </div>
 
-              <p className="modal-warning">
-                Foto akan disimpan sebagai bukti pengiriman dan dapat dilihat oleh customer
-              </p>
+              {/* Appreciation Message Section */}
+              <div className="doc-form-section">
+                <label className="doc-form-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                  Pesan Apresiasi
+                  <span className="required-badge">Wajib</span>
+                </label>
+                <textarea
+                  value={appreciationMessage}
+                  onChange={(e) => setAppreciationMessage(e.target.value)}
+                  placeholder="Contoh: Terima kasih atas pesanannya! Semoga produk kami memuaskan. Ditunggu orderan selanjutnya ya 😊"
+                  className="appreciation-textarea"
+                  rows={4}
+                />
+                <p className="field-hint">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  Pesan ini akan ditampilkan di halaman tracking customer
+                </p>
+              </div>
 
-              <div className="modal-actions">
-                <button
-                  onClick={() => {
-                    setShowPhotoModal(false);
-                    setDeliveryPhoto('');
-                  }}
-                  className="modal-btn-cancel"
-                >
-                  Batal
-                </button>
+              {/* Action Buttons */}
+              <div className="doc-modal-actions">
                 <button
                   onClick={handleCompleteOrder}
-                  className="modal-btn-confirm"
-                  disabled={!deliveryPhoto || uploadingPhoto}
-                  style={{ opacity: (deliveryPhoto && !uploadingPhoto) ? 1 : 0.5 }}
+                  className={`doc-btn-primary ${(!deliveryPhoto || !appreciationMessage.trim() || uploadingPhoto) ? 'disabled' : ''}`}
+                  disabled={!deliveryPhoto || !appreciationMessage.trim() || uploadingPhoto}
                 >
-                  Selesaikan Pesanan
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Submit
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Payment Proof Modal */}
+      <AnimatePresence>
+        {showPaymentProofModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay"
+            onClick={() => setShowPaymentProofModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto' }}
+            >
+              <h2 className="modal-title">Bukti Pembayaran</h2>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                padding: '20px',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <img 
+                  src={selectedPaymentProof} 
+                  alt="Bukti Pembayaran" 
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '70vh',
+                    objectFit: 'contain',
+                    cursor: 'zoom-in'
+                  }}
+                  onClick={() => window.open(selectedPaymentProof, '_blank')}
+                />
+              </div>
+              <div className="modal-actions">
+                <button 
+                  onClick={() => window.open(selectedPaymentProof, '_blank')}
+                  className="btn-primary"
+                  style={{ marginRight: '10px' }}
+                >
+                  Buka di Tab Baru
+                </button>
+                <button 
+                  onClick={() => setShowPaymentProofModal(false)}
+                  className="btn-secondary"
+                >
+                  Tutup
                 </button>
               </div>
             </motion.div>

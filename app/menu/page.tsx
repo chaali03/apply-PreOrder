@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MobileMenu from '../../components/ui/mobile-menu';
 import CurvedMenu from '../../components/ui/curved-menu';
 import { Spinner } from '../../components/ui/ios-spinner';
+import { fetchAPI } from '@/lib/fetch-api';
 import './menu.css';
 
 interface Product {
@@ -33,23 +34,31 @@ export default function MenuPage() {
 
   // Fetch products from API
   useEffect(() => {
-    console.log('Fetching products from API...');
-    fetch('http://localhost:8080/api/admin/products')
-      .then(res => res.json())
-      .then(data => {
+    const loadProducts = async () => {
+      console.log('Fetching products from API using fetchAPI helper...');
+      setLoading(true);
+      try {
+        const res = await fetchAPI('/api/admin/products');
+        const data = await res.json();
+
         console.log('Products fetched:', data);
         if (data.success) {
           console.log('Number of products:', data.data.length);
-          console.log('Products with is_available=false:', data.data.filter((p: Product) => !p.is_available).length);
+          console.log(
+            'Products with is_available=false:',
+            data.data.filter((p: Product) => !p.is_available).length
+          );
           setProducts(data.data);
           setFilteredProducts(data.data);
         }
-        setLoading(false);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error fetching products:', error);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    loadProducts();
   }, []);
 
   // Filter products
@@ -154,7 +163,7 @@ export default function MenuPage() {
                     {product.is_available ? (
                       <Link href={`/menu/${product.id}`}>
                         <img 
-                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          src={product.image_url_1 ? `${process.env.NEXT_PUBLIC_API_URL}${product.image_url_1}` : '/produk/placeholder.svg'} 
                           alt={product.name} 
                           className="product-image" 
                         />
@@ -162,7 +171,7 @@ export default function MenuPage() {
                     ) : (
                       <div className="product-image-disabled">
                         <img 
-                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          src={product.image_url_1 ? `${process.env.NEXT_PUBLIC_API_URL}${product.image_url_1}` : '/produk/placeholder.svg'} 
                           alt={product.name} 
                           className="product-image" 
                         />

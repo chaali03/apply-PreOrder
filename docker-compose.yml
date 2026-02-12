@@ -31,6 +31,15 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: scafffood-cloudflared
+    command: tunnel --url http://172.17.0.1:8080
+    restart: unless-stopped
+    # Note: Quick tunnel URL will change on every restart
+    # To get the URL, check logs: docker logs scafffood-cloudflared
+    # 172.17.0.1 is the default Docker bridge gateway (host machine)
+
 volumes:
   postgres_data:
     driver: local

@@ -21,6 +21,15 @@ interface Product {
   stock: number;
   is_available: boolean;
   min_order: number;
+  variants?: ProductVariant[];
+}
+
+interface ProductVariant {
+  id?: string;
+  name: string;
+  price: number;
+  stock: number;
+  is_available: boolean;
 }
 
 export default function DashboardMenuPage() {
@@ -54,12 +63,18 @@ export default function DashboardMenuPage() {
     min_order: 1
   });
 
+  const [variants, setVariants] = useState<ProductVariant[]>([
+    { name: "", price: 0, stock: 100, is_available: true },
+    { name: "", price: 0, stock: 100, is_available: true },
+    { name: "", price: 0, stock: 100, is_available: true }
+  ]);
+
   // Fetch products
   const fetchProducts = (showLoading = true) => {
     if (showLoading) {
       setLoading(true);
     }
-    fetch('http://localhost:8080/api/admin/products')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`)
       .then(res => res.json())
       .then(data => {
         console.log('Fetched products:', data);
@@ -108,6 +123,22 @@ export default function DashboardMenuPage() {
     return currentCategories.includes(category);
   };
 
+  const handleVariantChange = (index: number, field: keyof ProductVariant, value: string | number | boolean) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setVariants(newVariants);
+  };
+
+  const addVariantField = () => {
+    setVariants([...variants, { name: "", price: 0, stock: 100, is_available: true }]);
+  };
+
+  const removeVariantField = (index: number) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, imageNumber: 1 | 2 | 3) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -130,7 +161,7 @@ export default function DashboardMenuPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('http://localhost:8080/api/upload', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
         method: 'POST',
         body: formData
       });
@@ -169,8 +200,14 @@ export default function DashboardMenuPage() {
       image_url_1: "",
       image_url_2: "",
       image_url_3: "",
-      is_available: true
+      is_available: true,
+      min_order: 1
     });
+    setVariants([
+      { name: "", price: 0, stock: 100, is_available: true },
+      { name: "", price: 0, stock: 100, is_available: true },
+      { name: "", price: 0, stock: 100, is_available: true }
+    ]);
     setShowModal(true);
   };
 
@@ -191,6 +228,16 @@ export default function DashboardMenuPage() {
       is_available: product.is_available,
       min_order: product.min_order || 1
     });
+    // Load existing variants or create empty ones
+    if (product.variants && product.variants.length > 0) {
+      setVariants(product.variants);
+    } else {
+      setVariants([
+        { name: "", price: 0, stock: 100, is_available: true },
+        { name: "", price: 0, stock: 100, is_available: true },
+        { name: "", price: 0, stock: 100, is_available: true }
+      ]);
+    }
     setShowModal(true);
   };
 
@@ -203,20 +250,32 @@ export default function DashboardMenuPage() {
       return;
     }
     
+    // Filter out empty variants
+    const validVariants = variants.filter(v => v.name.trim() !== '' && v.price > 0);
+    
+    console.log('Submitting product data:', formData);
+    console.log('Submitting variants:', validVariants);
+    
     const url = modalMode === "add" 
-      ? 'http://localhost:8080/api/admin/products'
-      : `http://localhost:8080/api/admin/products/${selectedProduct?.id}`;
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`
+      : `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${selectedProduct?.id}`;
     
     const method = modalMode === "add" ? 'POST' : 'PUT';
+
+    const payload = {
+      ...formData,
+      variants: validVariants.length > 0 ? validVariants : undefined
+    };
 
     try {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
+      console.log('Server response:', data);
       
       if (data.success) {
         showNotification(data.message, 'success');
@@ -240,7 +299,7 @@ export default function DashboardMenuPage() {
     if (!productToDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/products/${productToDelete.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${productToDelete.id}`, {
         method: 'DELETE'
       });
 
@@ -269,7 +328,7 @@ export default function DashboardMenuPage() {
     try {
       console.log('Toggling product:', product.id, 'Current availability:', product.is_available);
       
-      const response = await fetch(`http://localhost:8080/api/admin/products/${product.id}/toggle`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${product.id}/toggle`, {
         method: 'PATCH'
       });
 
@@ -389,6 +448,16 @@ export default function DashboardMenuPage() {
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
             <span>Menu</span>
+          </a>
+
+          <a href="/dashboard/qris" className="dash-nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>QRIS</span>
           </a>
 
           <a href="/dashboard/laporan" className="dash-nav-item">
@@ -610,6 +679,101 @@ export default function DashboardMenuPage() {
                       Jumlah minimal yang harus dipesan customer
                     </small>
                   </div>
+                </div>
+
+                {/* Variants Section */}
+                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#f9f9f9', border: '2px solid #1a1a1a' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <label style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                      Varian Produk (Opsional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addVariantField}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#bff000',
+                        border: '2px solid #1a1a1a',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Tambah Varian
+                    </button>
+                  </div>
+                  <small style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '16px' }}>
+                    Contoh: Small, Medium, Large atau 250ml, 500ml, 1L
+                  </small>
+
+                  {variants.map((variant, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: '16px', 
+                      padding: '16px', 
+                      background: 'white', 
+                      border: '2px solid #1a1a1a',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <strong style={{ fontSize: '14px' }}>Varian {index + 1}</strong>
+                        {variants.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeVariantField(index)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#ff3b30',
+                              color: 'white',
+                              border: '2px solid #1a1a1a',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 700
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Nama Varian</label>
+                          <input
+                            type="text"
+                            value={variant.name}
+                            onChange={(e) => handleVariantChange(index, 'name', e.target.value)}
+                            placeholder="Contoh: Small, Medium, Large"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Harga (Rp)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.price}
+                            onChange={(e) => handleVariantChange(index, 'price', Number(e.target.value))}
+                            placeholder="5000"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Stok</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.stock}
+                            onChange={(e) => handleVariantChange(index, 'stock', Number(e.target.value))}
+                            placeholder="100"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="form-group">

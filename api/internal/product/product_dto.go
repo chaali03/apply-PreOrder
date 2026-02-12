@@ -1,7 +1,6 @@
 package product
 
 import (
-	"strconv"
 	"time"
 )
 
@@ -38,7 +37,7 @@ type ProductResponse struct {
 // Converter functions
 func ToResponse(entity Product) ProductResponse {
 	return ProductResponse{
-		ID:        strconv.FormatUint(uint64(entity.ID), 10),
+		ID:        entity.ID,
 		Name:      entity.Name,
 		Desc:      entity.Desc,
 		Quantity:  entity.Quantity,

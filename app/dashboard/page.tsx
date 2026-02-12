@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Spinner } from "../../components/ui/ios-spinner";
+import { fetchAPI } from "@/lib/fetch-api";
 import './dashboard-new.css';
 
 interface DashboardStats {
@@ -32,20 +33,15 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats (pakai runtime config dari /config.json)
   useEffect(() => {
-    fetch('http://localhost:8080/api/dashboard/stats')
+    fetchAPI('/api/dashboard/stats')
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
-          setStats(data.data);
-        }
+        if (data.success) setStats(data.data);
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error fetching dashboard stats:', error);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
   // Format currency
@@ -147,15 +143,6 @@ export default function DashboardPage() {
             <span>Menu</span>
           </a>
 
-          <a href="/dashboard/laporan" className="dash-nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="20" x2="18" y2="10"></line>
-              <line x1="12" y1="20" x2="12" y2="4"></line>
-              <line x1="6" y1="20" x2="6" y2="14"></line>
-            </svg>
-            <span>Laporan</span>
-          </a>
-
           <a href="/dashboard/qris" className="dash-nav-item">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7"></rect>
@@ -164,6 +151,15 @@ export default function DashboardPage() {
               <rect x="3" y="14" width="7" height="7"></rect>
             </svg>
             <span>QRIS</span>
+          </a>
+
+          <a href="/dashboard/laporan" className="dash-nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span>Laporan</span>
           </a>
         </nav>
 

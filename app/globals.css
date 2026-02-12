@@ -600,6 +600,59 @@ nav a:hover {
   transform: scale(1.1);
 }
 
+/* Ribbon Tag Styling */
+.ribbon-tag {
+  position: absolute;
+  top: 15px;
+  right: -5px;
+  background: var(--primary);
+  color: white;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 3px solid var(--dark);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  transform: rotate(3deg);
+  transition: all 0.3s ease;
+}
+
+.ribbon-tag::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid var(--dark);
+}
+
+.social-item:hover .ribbon-tag {
+  transform: rotate(0deg) scale(1.05);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 767px) {
+  .ribbon-tag {
+    font-size: 10px;
+    padding: 6px 15px;
+    top: 10px;
+    right: -3px;
+  }
+  
+  .ribbon-tag::before {
+    border-right-width: 6px;
+    border-top-width: 6px;
+    border-bottom-width: 6px;
+    left: -6px;
+  }
+}
+
 footer {
   padding: 40px 20px;
   background: white;

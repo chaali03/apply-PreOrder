@@ -19,11 +19,14 @@ export default function QRISSettingsPage() {
 
   const fetchQRISImage = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings?key=qris_image');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings?key=qris_image`);
       const data = await response.json();
       
       if (data.success && data.data.value) {
-        setQrisImage(data.data.value);
+        const value = data.data.value as string;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
+        setQrisImage(absoluteUrl);
       }
     } catch (error) {
       console.error('Error fetching QRIS image:', error);
@@ -56,7 +59,7 @@ export default function QRISSettingsPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const uploadResponse = await fetch('http://localhost:8080/api/upload', {
+      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
         method: 'POST',
         body: formData
       });
@@ -64,7 +67,13 @@ export default function QRISSettingsPage() {
       const uploadData = await uploadResponse.json();
 
       if (uploadData.success) {
-        setQrisImage(uploadData.url);
+        // Simpan URL absolut supaya bisa diakses dari Netlify (domain backend)
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const absoluteUrl = uploadData.url.startsWith('http')
+          ? uploadData.url
+          : `${baseUrl}${uploadData.url}`;
+
+        setQrisImage(absoluteUrl);
         showNotif('Gambar berhasil diupload');
       } else {
         showNotif('Gagal upload gambar');
@@ -86,7 +95,7 @@ export default function QRISSettingsPage() {
     setSaving(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/settings', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,15 +173,6 @@ export default function QRISSettingsPage() {
             <span>Menu</span>
           </a>
 
-          <a href="/dashboard/laporan" className="dash-nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="20" x2="18" y2="10"></line>
-              <line x1="12" y1="20" x2="12" y2="4"></line>
-              <line x1="6" y1="20" x2="6" y2="14"></line>
-            </svg>
-            <span>Laporan</span>
-          </a>
-
           <a href="/dashboard/qris" className="dash-nav-item dash-nav-item-active">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7"></rect>
@@ -181,6 +181,15 @@ export default function QRISSettingsPage() {
               <rect x="3" y="14" width="7" height="7"></rect>
             </svg>
             <span>QRIS</span>
+          </a>
+
+          <a href="/dashboard/laporan" className="dash-nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span>Laporan</span>
           </a>
         </nav>
 

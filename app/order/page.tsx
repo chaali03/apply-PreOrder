@@ -83,12 +83,19 @@ export default function OrderPage() {
 
   const fetchQRISImage = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings?key=qris_image');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings?key=qris_image`);
       const data = await response.json();
       
+      console.log('QRIS API response:', data);
+      
       if (data.success && data.data.value) {
-        setQrCodeUrl(data.data.value);
+        const value = data.data.value as string;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
+        console.log('QRIS URL:', absoluteUrl);
+        setQrCodeUrl(absoluteUrl);
       } else {
+        console.log('No QRIS in database, generating fallback QR');
         // Fallback: generate QR if no image in database
         const qrisData = `00020101021226670016ID.CO.QRIS.WWW0118ID${Date.now()}0215ID10SCAFFFOOD0303UMI51440014ID.CO.QRIS.WWW02180000000000000000000303UMI5204599953033605802ID5913SCAFF*FOOD6007JAKARTA61051234062070703A0163044B3D`;
         
@@ -110,12 +117,25 @@ export default function OrderPage() {
     }
   };
 
-  const downloadQR = () => {
+  const downloadQR = async () => {
     if (qrCodeUrl) {
-      const link = document.createElement('a');
-      link.download = `QRIS-SCAFFFOOD-${Date.now()}.png`;
-      link.href = qrCodeUrl;
-      link.click();
+      try {
+        // Try to download using fetch with no-cors mode
+        const response = await fetch(qrCodeUrl, { mode: 'no-cors' });
+        
+        // If fetch fails, fallback to opening in new tab
+        if (!response.ok && response.type !== 'opaque') {
+          throw new Error('Fetch failed');
+        }
+        
+        // For cross-origin images, just open in new tab
+        // User can right-click and save from there
+        window.open(qrCodeUrl, '_blank');
+      } catch (error) {
+        console.error('Error downloading QR:', error);
+        // Fallback: open in new tab
+        window.open(qrCodeUrl, '_blank');
+      }
     }
   };
 
@@ -245,6 +265,33 @@ export default function OrderPage() {
     setSubmitting(true);
     
     try {
+      // Upload payment proof first if exists
+      let paymentProofUrl = "";
+      if (paymentProof) {
+        try {
+          // Convert base64 to blob
+          const base64Response = await fetch(paymentProof);
+          const blob = await base64Response.blob();
+          
+          const formData = new FormData();
+          formData.append('image', blob, 'payment-proof.jpg');
+
+          const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          const uploadData = await uploadResponse.json();
+          if (uploadData.success) {
+            paymentProofUrl = uploadData.url;
+            console.log('📸 Payment proof uploaded:', paymentProofUrl);
+          }
+        } catch (uploadError) {
+          console.error('Error uploading payment proof:', uploadError);
+          // Continue without payment proof
+        }
+      }
+
       // Prepare order data
       const orderData = {
         order: {
@@ -257,6 +304,7 @@ export default function OrderPage() {
           total: total,
           payment_method: "qris",
           payment_status: "paid",
+          payment_proof: paymentProofUrl,
           order_status: "processing"
         },
         items: cartItems.map(item => ({
@@ -269,13 +317,16 @@ export default function OrderPage() {
         }))
       };
 
-      const response = await fetch('http://localhost:8080/api/orders', {
+      console.log('📦 Submitting order:', orderData);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
       });
 
       const data = await response.json();
+      console.log('📦 Order response:', data);
 
       if (data.success) {
         setOrderNumber(data.data.order.order_number);
@@ -566,7 +617,7 @@ export default function OrderPage() {
                               <polyline points="7 10 12 15 17 10"></polyline>
                               <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Download QR
+                            Lihat QR
                           </button>
                         </>
                       ) : (

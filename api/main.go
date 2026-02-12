@@ -35,43 +35,58 @@ type User struct {
 
 // Product model
 type Product struct {
-	ID               string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	Name             string    `gorm:"not null" json:"name"`
-	ShortDescription string    `json:"short_description"`
-	Description      string    `json:"description"`
-	Price            float64   `gorm:"not null" json:"price"`
-	Category         string    `json:"category"`
-	Tag              string    `json:"tag"`
-	TagColor         string    `json:"tag_color"`
-	ImageURL1        string    `gorm:"column:image_url_1" json:"image_url_1"`
-	ImageURL2        string    `gorm:"column:image_url_2" json:"image_url_2"`
-	ImageURL3        string    `gorm:"column:image_url_3" json:"image_url_3"`
-	Stock            int       `gorm:"default:0" json:"stock"`
-	IsAvailable      bool      `gorm:"default:true" json:"is_available"`
-	MinOrder         int       `gorm:"default:1" json:"min_order"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               string           `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Name             string           `gorm:"not null" json:"name"`
+	ShortDescription string           `json:"short_description"`
+	Description      string           `json:"description"`
+	Price            float64          `gorm:"not null" json:"price"`
+	Category         string           `json:"category"`
+	Tag              string           `json:"tag"`
+	TagColor         string           `json:"tag_color"`
+	ImageURL1        string           `gorm:"column:image_url_1" json:"image_url_1"`
+	ImageURL2        string           `gorm:"column:image_url_2" json:"image_url_2"`
+	ImageURL3        string           `gorm:"column:image_url_3" json:"image_url_3"`
+	Stock            int              `gorm:"default:0" json:"stock"`
+	IsAvailable      bool             `gorm:"default:true" json:"is_available"`
+	MinOrder         int              `gorm:"default:1" json:"min_order"`
+	Variants         []ProductVariant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
+}
+
+// ProductVariant model
+type ProductVariant struct {
+	ID          string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	ProductID   string    `gorm:"type:uuid;not null" json:"product_id"`
+	Name        string    `gorm:"not null" json:"name"`
+	Price       float64   `gorm:"not null" json:"price"`
+	Stock       int       `gorm:"default:0" json:"stock"`
+	IsAvailable bool      `gorm:"default:true" json:"is_available"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Order model
 type Order struct {
-	ID                 string     `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	OrderNumber        string     `gorm:"unique;not null" json:"order_number"`
-	CustomerName       string     `gorm:"not null" json:"customer_name"`
-	CustomerEmail      string     `gorm:"not null" json:"customer_email"`
-	CustomerPhone      string     `gorm:"not null" json:"customer_phone"`
-	DeliveryAddress    string     `json:"delivery_address"`
-	Subtotal           float64    `json:"subtotal"`
-	DeliveryFee        float64    `json:"delivery_fee"`
-	Total              float64    `json:"total"`
-	PaymentMethod      string     `json:"payment_method"`
-	PaymentStatus      string     `gorm:"default:'pending'" json:"payment_status"`
-	OrderStatus        string     `gorm:"default:'pending'" json:"order_status"`
-	DeliveryPhoto      string     `json:"delivery_photo,omitempty"`
-	CancellationReason string     `json:"cancellation_reason,omitempty"`
-	CancelledAt        *time.Time `json:"cancelled_at,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	ID                   string     `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	OrderNumber          string     `gorm:"unique;not null" json:"order_number"`
+	CustomerName         string     `gorm:"not null" json:"customer_name"`
+	CustomerEmail        string     `gorm:"not null" json:"customer_email"`
+	CustomerPhone        string     `gorm:"not null" json:"customer_phone"`
+	DeliveryAddress      string     `json:"delivery_address"`
+	Subtotal             float64    `json:"subtotal"`
+	DeliveryFee          float64    `json:"delivery_fee"`
+	Total                float64    `json:"total"`
+	PaymentMethod        string     `json:"payment_method"`
+	PaymentStatus        string     `gorm:"default:'pending'" json:"payment_status"`
+	PaymentProof         string     `json:"payment_proof,omitempty"`
+	OrderStatus          string     `gorm:"default:'pending'" json:"order_status"`
+	DeliveryPhoto        string     `json:"delivery_photo,omitempty"`
+	AppreciationMessage  string     `json:"appreciation_message,omitempty"`
+	CancellationReason   string     `json:"cancellation_reason,omitempty"`
+	CancelledAt          *time.Time `json:"cancelled_at,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 // OrderItem model
@@ -182,6 +197,22 @@ func generateRandomString(length int) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// Resolve public directory for uploads both in local dev and Docker/production
+func getPublicDir() string {
+	// Try ./public relative to current working directory
+	if _, err := os.Stat("public"); err == nil {
+		return "public"
+	}
+
+	// Try ../public (when binary is run from api/ directory)
+	if _, err := os.Stat(filepath.Join("..", "public")); err == nil {
+		return filepath.Join("..", "public")
+	}
+
+	// Fallback to ./public
+	return "public"
 }
 
 func connectDatabase() {
@@ -442,11 +473,18 @@ func main() {
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://localhost:3001",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-		AllowMethods:     "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-		AllowCredentials: true,
+		// Allow all origins for frontend (localhost:3000, Netlify, etc.)
+		AllowOrigins: "*",
+		// Include custom header used by frontend to bypass ngrok warning
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, ngrok-skip-browser-warning",
+		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+		// We don't use cookies/credentials from browser
+		AllowCredentials: false,
 	}))
+
+	// Static files for uploaded images (QRIS, product images, etc.)
+	publicDir := getPublicDir()
+	app.Static("/produk", filepath.Join(publicDir, "produk"))
 
 	// Routes
 	app.Get("/api/health", func(c *fiber.Ctx) error {
@@ -487,12 +525,24 @@ func main() {
 		// Generate unique filename
 		ext := filepath.Ext(file.Filename)
 		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), generateRandomString(8), ext)
-		
+
+		// Resolve base public directory and ensure upload folder exists
+		publicDir := getPublicDir()
+		uploadDir := filepath.Join(publicDir, "produk")
+
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			log.Printf("Error creating upload directory %s: %v", uploadDir, err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to prepare upload directory",
+			})
+		}
+
 		// Save to public/produk directory
-		uploadPath := filepath.Join("public", "produk", filename)
-		
+		uploadPath := filepath.Join(uploadDir, filename)
+
 		if err := c.SaveFile(file, uploadPath); err != nil {
-			log.Printf("Error saving file: %v", err)
+			log.Printf("Error saving file to %s: %v", uploadPath, err)
 			return c.Status(500).JSON(fiber.Map{
 				"success": false,
 				"message": "Failed to save file",
@@ -640,7 +690,7 @@ func main() {
 		}
 
 		var products []Product
-		result := DB.Where("is_available = ?", true).Find(&products)
+		result := DB.Preload("Variants").Where("is_available = ?", true).Find(&products)
 		
 		if result.Error != nil {
 			log.Printf("Error fetching products: %v", result.Error)
@@ -666,7 +716,7 @@ func main() {
 
 		id := c.Params("id")
 		var product Product
-		result := DB.Where("id = ? AND is_available = ?", id, true).First(&product)
+		result := DB.Preload("Variants").Where("id = ? AND is_available = ?", id, true).First(&product)
 		
 		if result.Error != nil {
 			return c.Status(404).JSON(fiber.Map{
@@ -691,7 +741,7 @@ func main() {
 		}
 
 		var products []Product
-		result := DB.Order("created_at DESC").Find(&products)
+		result := DB.Preload("Variants").Order("created_at DESC").Find(&products)
 		
 		if result.Error != nil {
 			log.Printf("Error fetching products: %v", result.Error)
@@ -729,8 +779,12 @@ func main() {
 			})
 		}
 
-		var product Product
-		if err := c.BodyParser(&product); err != nil {
+		var requestData struct {
+			Product
+			Variants []ProductVariant `json:"variants"`
+		}
+		
+		if err := c.BodyParser(&requestData); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
 				"message": "Invalid request body",
@@ -738,16 +792,17 @@ func main() {
 		}
 
 		// Set default values
-		if product.Stock == 0 {
-			product.Stock = 100
+		if requestData.Stock == 0 {
+			requestData.Stock = 100
 		}
-		if !product.IsAvailable {
-			product.IsAvailable = true
-		}
-		if product.MinOrder == 0 {
-			product.MinOrder = 1
+		// Always set new products as available
+		requestData.IsAvailable = true
+		if requestData.MinOrder == 0 {
+			requestData.MinOrder = 1
 		}
 
+		// Create product
+		product := requestData.Product
 		result := DB.Create(&product)
 		if result.Error != nil {
 			log.Printf("Error creating product: %v", result.Error)
@@ -756,6 +811,25 @@ func main() {
 				"message": "Failed to create product",
 			})
 		}
+
+		// Create variants if provided
+		if len(requestData.Variants) > 0 {
+			for i := range requestData.Variants {
+				requestData.Variants[i].ProductID = product.ID
+				if requestData.Variants[i].Stock == 0 {
+					requestData.Variants[i].Stock = 100
+				}
+				requestData.Variants[i].IsAvailable = true
+			}
+			
+			if err := DB.Create(&requestData.Variants).Error; err != nil {
+				log.Printf("Error creating variants: %v", err)
+				// Don't fail the whole request, just log the error
+			}
+		}
+
+		// Reload product with variants
+		DB.Preload("Variants").First(&product, "id = ?", product.ID)
 
 		return c.JSON(fiber.Map{
 			"success": true,
@@ -906,8 +980,8 @@ func main() {
 
 		var stats DashboardStats
 
-		// Total Customers
-		DB.Model(&User{}).Where("role = ?", "customer").Count(&stats.TotalCustomers)
+		// Total Customers - count from orders (each order = 1 customer)
+		DB.Model(&Order{}).Count(&stats.TotalCustomers)
 
 		// Total Orders
 		DB.Model(&Order{}).Count(&stats.TotalOrders)
@@ -934,10 +1008,10 @@ func main() {
 		sevenDaysAgo := now.AddDate(0, 0, -7)
 		fourteenDaysAgo := now.AddDate(0, 0, -14)
 
-		// Customer growth
+		// Customer growth - based on orders
 		var customersLast7, customersPrevious7 int64
-		DB.Model(&User{}).Where("role = ? AND created_at >= ?", "customer", sevenDaysAgo).Count(&customersLast7)
-		DB.Model(&User{}).Where("role = ? AND created_at >= ? AND created_at < ?", "customer", fourteenDaysAgo, sevenDaysAgo).Count(&customersPrevious7)
+		DB.Model(&Order{}).Where("created_at >= ?", sevenDaysAgo).Count(&customersLast7)
+		DB.Model(&Order{}).Where("created_at >= ? AND created_at < ?", fourteenDaysAgo, sevenDaysAgo).Count(&customersPrevious7)
 		if customersPrevious7 > 0 {
 			stats.CustomerGrowth = float64(customersLast7-customersPrevious7) / float64(customersPrevious7) * 100
 		} else if customersLast7 > 0 {
@@ -1172,9 +1246,10 @@ func main() {
 
 		id := c.Params("id")
 		var requestData struct {
-			Status             string `json:"status"`
-			CancellationReason string `json:"cancellation_reason,omitempty"`
-			DeliveryPhoto      string `json:"delivery_photo,omitempty"`
+			Status              string `json:"status"`
+			CancellationReason  string `json:"cancellation_reason,omitempty"`
+			DeliveryPhoto       string `json:"delivery_photo,omitempty"`
+			AppreciationMessage string `json:"appreciation_message,omitempty"`
 		}
 
 		if err := c.BodyParser(&requestData); err != nil {
@@ -1213,9 +1288,14 @@ func main() {
 			updateData["cancelled_at"] = now
 		}
 
-		// If status is completed, add delivery photo if provided
-		if requestData.Status == "completed" && requestData.DeliveryPhoto != "" {
-			updateData["delivery_photo"] = requestData.DeliveryPhoto
+		// If status is completed, add delivery photo and appreciation message if provided
+		if requestData.Status == "completed" {
+			if requestData.DeliveryPhoto != "" {
+				updateData["delivery_photo"] = requestData.DeliveryPhoto
+			}
+			if requestData.AppreciationMessage != "" {
+				updateData["appreciation_message"] = requestData.AppreciationMessage
+			}
 		}
 
 		result := DB.Model(&order).Updates(updateData)
@@ -1233,6 +1313,14 @@ func main() {
 			order.CancellationReason = requestData.CancellationReason
 			now := time.Now()
 			order.CancelledAt = &now
+		}
+		if requestData.Status == "completed" {
+			if requestData.DeliveryPhoto != "" {
+				order.DeliveryPhoto = requestData.DeliveryPhoto
+			}
+			if requestData.AppreciationMessage != "" {
+				order.AppreciationMessage = requestData.AppreciationMessage
+			}
 		}
 		log.Printf("✅ Order %s status updated: %s → %s", order.OrderNumber, oldStatus, requestData.Status)
 

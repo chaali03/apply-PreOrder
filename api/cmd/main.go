@@ -9,6 +9,7 @@ import (
 	"scaff-food-backend/internal/routes"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 )
 
@@ -31,7 +32,15 @@ func main() {
 	app := fiber.New(fiber.Config{
 		AppName: "Product API (Docker)",
 	})
-	
+
+	// Global CORS (untuk akses dari Next.js / Netlify)
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, ngrok-skip-browser-warning",
+		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+		AllowCredentials: false,
+	}))
+
 	// Serve static files dari folder Docker
 	app.Static("/uploads", "/app/uploads")
 	
