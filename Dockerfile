@@ -2,7 +2,7 @@
 # This explicitly builds ONLY the Go backend, ignoring all frontend files
 
 # Stage 1: Build Go application
-FROM golang:1.21-alpine AS go-builder
+FROM golang:1.23-alpine AS go-builder
 
 # Set working directory
 WORKDIR /build
