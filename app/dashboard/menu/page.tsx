@@ -761,16 +761,6 @@ export default function DashboardMenuPage() {
                             placeholder="5000"
                           />
                         </div>
-                        <div className="form-group">
-                          <label>Stok</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={variant.stock}
-                            onChange={(e) => handleVariantChange(index, 'stock', Number(e.target.value))}
-                            placeholder="100"
-                          />
-                        </div>
                       </div>
                     </div>
                   ))}

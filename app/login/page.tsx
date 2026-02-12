@@ -45,7 +45,7 @@ function LoginContent() {
     e.preventDefault();
     if (email) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-code`, {
+        const response = await fetch('/api/auth/send-code', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ function LoginContent() {
     if (!canResend) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-code`, {
+      const response = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ function LoginContent() {
       const codeString = code.join("");
       
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-code`, {
+        const response = await fetch('/api/auth/verify-code', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
