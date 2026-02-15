@@ -1,4 +1,0 @@
-{
-  "apiUrl": "https://outputs-manufactured-unable-creator.trycloudflare.com",
-  "_comment": "Ubah apiUrl ke URL Cloudflare Tunnel terbaru (dari Docker cloudflared/new-tunnel.sh), lalu deploy ke Vercel (scaff-food)"
-}

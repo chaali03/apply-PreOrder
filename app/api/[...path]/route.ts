@@ -1,40 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// This is a catch-all proxy for all /api/* requests
-// It forwards requests to the Go backend
+// Catch-all API proxy - forwards all /api/* requests to backend
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await context.params;
   return proxyRequest(request, params.path, 'GET');
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await context.params;
   return proxyRequest(request, params.path, 'POST');
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await context.params;
   return proxyRequest(request, params.path, 'PUT');
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await context.params;
   return proxyRequest(request, params.path, 'PATCH');
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await context.params;
   return proxyRequest(request, params.path, 'DELETE');
 }
 
@@ -62,7 +66,6 @@ async function proxyRequest(
       method,
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': '1',
       },
     };
     

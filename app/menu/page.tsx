@@ -163,7 +163,7 @@ export default function MenuPage() {
                     {product.is_available ? (
                       <Link href={`/menu/${product.id}`}>
                         <img 
-                          src={product.image_url_1 ? `${process.env.NEXT_PUBLIC_API_URL}${product.image_url_1}` : '/produk/placeholder.svg'} 
+                          src={product.image_url_1 || '/produk/placeholder.svg'} 
                           alt={product.name} 
                           className="product-image" 
                         />
@@ -171,7 +171,7 @@ export default function MenuPage() {
                     ) : (
                       <div className="product-image-disabled">
                         <img 
-                          src={product.image_url_1 ? `${process.env.NEXT_PUBLIC_API_URL}${product.image_url_1}` : '/produk/placeholder.svg'} 
+                          src={product.image_url_1 || '/produk/placeholder.svg'} 
                           alt={product.name} 
                           className="product-image" 
                         />

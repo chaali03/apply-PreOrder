@@ -131,7 +131,8 @@ export default function ProductDetailPage() {
   const getImageUrl = (url: string | undefined) => {
     if (!url) return '/produk/placeholder.svg';
     if (url.startsWith('http')) return url;
-    return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+    // Images are served from Next.js public folder, not backend
+    return url;
   };
 
   const productImages = [
