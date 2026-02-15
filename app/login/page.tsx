@@ -176,19 +176,19 @@ function LoginContent() {
   };
 
   const handleGoToDashboard = () => {
-    router.push(redirectPath);
+    window.location.href = redirectPath;
   };
 
   // Setelah login sukses, auto-redirect ke dashboard tanpa harus klik tombol
   useEffect(() => {
     if (step === "success") {
       const timeoutId = setTimeout(() => {
-        router.push(redirectPath);
+        window.location.href = redirectPath;
       }, 500); // redirect cepat setelah animasi
 
       return () => clearTimeout(timeoutId);
     }
-  }, [step, router, redirectPath]);
+  }, [step, redirectPath]);
 
   return (
     <div className="login-container">

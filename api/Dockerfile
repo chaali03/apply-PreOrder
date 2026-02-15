@@ -10,11 +10,12 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copy source code (exclude utility scripts)
 COPY . .
+RUN rm -f _*.go
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 # Final stage
 FROM alpine:latest
@@ -30,7 +31,7 @@ COPY --from=builder /app/main .
 RUN mkdir -p /root/uploads/products
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Run the application
 CMD ["./main"]

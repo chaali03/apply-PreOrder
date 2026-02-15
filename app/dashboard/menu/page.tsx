@@ -250,8 +250,8 @@ export default function DashboardMenuPage() {
       return;
     }
     
-    // Filter out empty variants
-    const validVariants = variants.filter(v => v.name.trim() !== '' && v.price > 0);
+    // Filter out empty variants (only require name, price can be 0 to inherit from product)
+    const validVariants = variants.filter(v => v.name && v.name.trim() !== '');
     
     console.log('Submitting product data:', formData);
     console.log('Submitting variants:', validVariants);
@@ -264,7 +264,7 @@ export default function DashboardMenuPage() {
 
     const payload = {
       ...formData,
-      variants: validVariants.length > 0 ? validVariants : undefined
+      variants: validVariants // Always send variants array (can be empty)
     };
 
     try {
@@ -717,19 +717,39 @@ export default function DashboardMenuPage() {
                     <div key={index} style={{ 
                       marginBottom: '16px', 
                       padding: '16px', 
-                      background: 'white', 
+                      background: variant.is_available ? 'white' : '#f8f8f8', 
                       border: '2px solid #1a1a1a',
-                      position: 'relative'
+                      position: 'relative',
+                      opacity: variant.is_available ? 1 : 0.7
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      {/* Watermark HABIS untuk varian */}
+                      {!variant.is_available && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%) rotate(-15deg)',
+                          fontSize: '32px',
+                          fontWeight: 900,
+                          color: 'rgba(255, 59, 48, 0.3)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '4px',
+                          pointerEvents: 'none',
+                          zIndex: 1
+                        }}>
+                          HABIS
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', position: 'relative', zIndex: 2 }}>
                         <strong style={{ fontSize: '14px' }}>Varian {index + 1}</strong>
-                        {variants.length > 1 && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {/* Button Habis/Restock */}
                           <button
                             type="button"
-                            onClick={() => removeVariantField(index)}
+                            onClick={() => handleVariantChange(index, 'is_available', !variant.is_available)}
                             style={{
-                              padding: '4px 8px',
-                              background: '#ff3b30',
+                              padding: '4px 12px',
+                              background: variant.is_available ? '#ff9500' : '#34c759',
                               color: 'white',
                               border: '2px solid #1a1a1a',
                               cursor: 'pointer',
@@ -737,11 +757,28 @@ export default function DashboardMenuPage() {
                               fontWeight: 700
                             }}
                           >
-                            Hapus
+                            {variant.is_available ? 'Tandai Habis' : 'Restock'}
                           </button>
-                        )}
+                          {variants.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeVariantField(index)}
+                              style={{
+                                padding: '4px 8px',
+                                background: '#ff3b30',
+                                color: 'white',
+                                border: '2px solid #1a1a1a',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 700
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="form-row">
+                      <div className="form-row" style={{ position: 'relative', zIndex: 2 }}>
                         <div className="form-group">
                           <label>Nama Varian</label>
                           <input

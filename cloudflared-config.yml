@@ -1,0 +1,7 @@
+tunnel: f262b238-fe0b-486a-84d2-16a3214dba62
+credentials-file: /home/chaali0324/.cloudflared/f262b238-fe0b-486a-84d2-16a3214dba62.json
+
+ingress:
+  - hostname: api.scafffood.my.id
+    service: http://localhost:8080
+  - service: http_status:404

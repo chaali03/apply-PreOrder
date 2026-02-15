@@ -19,6 +19,36 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - scafffood-network
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: scafffood-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: change_me
+      DB_NAME: management_preorder
+      PORT: 8080
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@scafffood.com}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - scafffood-network
+    volumes:
+      - ./public/produk:/root/uploads/products
 
   adminer:
     image: adminer
@@ -30,18 +60,22 @@ services:
     restart: unless-stopped
     environment:
       ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - scafffood-network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: scafffood-cloudflared
-    command: tunnel --url http://172.17.0.1:8080
+    command: tunnel --url http://api:8080
     restart: unless-stopped
-    # Note: This tunnel will be accessed via custom domain scafffood.my.id
-    # Setup instructions:
-    # 1. Get tunnel URL: docker logs scafffood-cloudflared | grep trycloudflare
-    # 2. In IDCloudHost DNS settings, point scafffood.my.id CNAME to the tunnel URL
-    # 3. Or use Cloudflare Tunnel's custom domain feature
-    # 172.17.0.1 is the default Docker bridge gateway (host machine)
+    depends_on:
+      - api
+    networks:
+      - scafffood-network
+
+networks:
+  scafffood-network:
+    driver: bridge
 
 volumes:
   postgres_data:

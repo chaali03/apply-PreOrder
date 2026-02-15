@@ -9,6 +9,14 @@ import { Spinner } from '../../../components/ui/ios-spinner';
 import { fetchAPI } from '@/lib/fetch-api';
 import './detail.css';
 
+interface ProductVariant {
+  id?: string;
+  name: string;
+  price: number;
+  stock: number;
+  is_available: boolean;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -24,6 +32,7 @@ interface Product {
   stock: number;
   is_available: boolean;
   min_order: number;
+  variants?: ProductVariant[];
 }
 
 export default function ProductDetailPage() {
@@ -35,6 +44,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   // Fetch product detail (pakai runtime config dari /config.json)
   useEffect(() => {
@@ -50,13 +60,23 @@ export default function ProductDetailPage() {
       .catch(() => setLoading(false));
   }, [productId]);
 
-  // Update quantity when product changes (for navigation between products)
+  // Update quantity and variant when product changes (for navigation between products)
   useEffect(() => {
     if (product) {
       const minOrder = product.min_order || 1;
       setQuantity(minOrder);
+      // Reset variant selection, auto-select first available variant if exists
+      if (product.variants && product.variants.length > 0) {
+        // Only consider variants with non-empty names
+        const validVariants = product.variants.filter(v => v.name && v.name.trim() !== '');
+        // Auto-select first available variant
+        const availableVariant = validVariants.find(v => v.is_available);
+        setSelectedVariant(availableVariant || null);
+      } else {
+        setSelectedVariant(null);
+      }
     }
-  }, [product?.id, product?.min_order]);
+  }, [product?.id, product?.min_order, product?.variants]);
 
   // Fetch related products
   useEffect(() => {
@@ -107,13 +127,27 @@ export default function ProductDetailPage() {
     );
   }
 
+  // Helper to get full image URL
+  const getImageUrl = (url: string | undefined) => {
+    if (!url) return '/produk/placeholder.svg';
+    if (url.startsWith('http')) return url;
+    return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+  };
+
   const productImages = [
-    product.image_url_1 || '/produk/placeholder.svg',
-    product.image_url_2 || '/produk/placeholder.svg',
-    product.image_url_3 || '/produk/placeholder.svg'
+    getImageUrl(product.image_url_1),
+    getImageUrl(product.image_url_2),
+    getImageUrl(product.image_url_3)
   ];
 
-  const totalPrice = product.price * quantity;
+  // Use variant price if selected (if variant price is 0, use product base price)
+  const currentPrice = selectedVariant 
+    ? (selectedVariant.price > 0 ? selectedVariant.price : product.price) 
+    : product.price;
+  const totalPrice = currentPrice * quantity;
+
+  // Filter variants that have a name (non-empty)
+  const availableVariants = product.variants?.filter(v => v.name && v.name.trim() !== '') || [];
 
   return (
     <>
@@ -181,8 +215,65 @@ export default function ProductDetailPage() {
               <p className="product-detail-description">{product.short_description}</p>
               
               <div className="product-detail-price">
-                Rp {product.price.toLocaleString()}
+                Rp {currentPrice.toLocaleString()}
+                {selectedVariant && (
+                  <span style={{ fontSize: '14px', color: '#666', marginLeft: '8px' }}>
+                    ({selectedVariant.name})
+                  </span>
+                )}
               </div>
+
+              {/* Variant Selector */}
+              {availableVariants.length > 0 && (
+                <div className="variant-section" style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px', fontWeight: '500' }}>Pilih Varian:</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {availableVariants.map((variant, index) => (
+                      <button
+                        key={variant.id || index}
+                        onClick={() => variant.is_available && setSelectedVariant(variant)}
+                        disabled={!variant.is_available}
+                        style={{
+                          padding: '10px 16px',
+                          border: selectedVariant?.name === variant.name ? '2px solid #FF6B35' : '1px solid #ddd',
+                          borderRadius: '8px',
+                          background: selectedVariant?.name === variant.name ? '#FFF5F2' : (variant.is_available ? '#fff' : '#f5f5f5'),
+                          cursor: variant.is_available ? 'pointer' : 'not-allowed',
+                          opacity: variant.is_available ? 1 : 0.6,
+                          transition: 'all 0.2s',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          minWidth: '100px'
+                        }}
+                      >
+                        {/* Watermark HABIS */}
+                        {!variant.is_available && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%) rotate(-15deg)',
+                            fontSize: '14px',
+                            fontWeight: 900,
+                            color: 'rgba(231, 76, 60, 0.7)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '2px',
+                            pointerEvents: 'none',
+                            zIndex: 2,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            HABIS
+                          </div>
+                        )}
+                        <div style={{ fontWeight: '500', position: 'relative', zIndex: 1 }}>{variant.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666', position: 'relative', zIndex: 1 }}>
+                          Rp {(variant.price > 0 ? variant.price : product.price).toLocaleString()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Quantity Selector */}
               <div className="quantity-section">
@@ -225,10 +316,11 @@ export default function ProductDetailPage() {
                     product: {
                       id: product.id,
                       name: product.name,
-                      price: product.price,
-                      image: product.image_url_1,
+                      price: currentPrice,
+                      image: getImageUrl(product.image_url_1),
                       category: product.category,
-                      min_order: product.min_order || 1
+                      min_order: product.min_order || 1,
+                      variant: selectedVariant ? selectedVariant.name : null
                     },
                     quantity: quantity,
                     total: totalPrice
@@ -237,8 +329,16 @@ export default function ProductDetailPage() {
                   // Navigate to order page
                   router.push('/order');
                 }}
+                disabled={availableVariants.length > 0 && !selectedVariant}
+                style={{
+                  opacity: (availableVariants.length > 0 && !selectedVariant) ? 0.5 : 1,
+                  cursor: (availableVariants.length > 0 && !selectedVariant) ? 'not-allowed' : 'pointer'
+                }}
               >
-                Pesan Sekarang - Rp {totalPrice.toLocaleString()}
+                {availableVariants.length > 0 && !selectedVariant 
+                  ? 'Pilih Varian Terlebih Dahulu'
+                  : `Pesan Sekarang - Rp ${totalPrice.toLocaleString()}`
+                }
               </button>
 
               {/* Full Description with Table Design */}
@@ -261,7 +361,7 @@ export default function ProductDetailPage() {
             {relatedProducts.map((relatedProduct) => (
               <div key={relatedProduct.id} className="related-card">
                 <img 
-                  src={relatedProduct.image_url_1 || '/produk/placeholder.svg'} 
+                  src={getImageUrl(relatedProduct.image_url_1)} 
                   alt={relatedProduct.name} 
                 />
                 <div className="related-card-body">

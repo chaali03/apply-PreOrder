@@ -13,6 +13,7 @@ interface CartItem {
   image: string;
   category?: string;
   min_order?: number;
+  variant?: string | null;
 }
 
 export default function OrderPage() {
@@ -31,7 +32,8 @@ export default function OrderPage() {
         quantity: orderData.quantity,
         image: orderData.product.image,
         category: orderData.product.category,
-        min_order: orderData.product.min_order || 1
+        min_order: orderData.product.min_order || 1,
+        variant: orderData.product.variant || null
       }]);
     }
 
@@ -228,7 +230,8 @@ export default function OrderPage() {
           price: updatedItems[0].price,
           image: updatedItems[0].image,
           category: updatedItems[0].category,
-          min_order: updatedItems[0].min_order
+          min_order: updatedItems[0].min_order,
+          variant: updatedItems[0].variant
         },
         quantity: updatedItems[0].quantity,
         total: updatedItems[0].price * updatedItems[0].quantity
@@ -309,7 +312,7 @@ export default function OrderPage() {
         },
         items: cartItems.map(item => ({
           product_id: item.id,
-          product_name: item.name,
+          product_name: item.variant ? `${item.name} (${item.variant})` : item.name,
           product_price: item.price,
           product_image: item.image,
           quantity: item.quantity,
@@ -409,6 +412,21 @@ export default function OrderPage() {
                         />
                         <div className="cart-item-info">
                           <h3 className="cart-item-name">{item.name}</h3>
+                          {item.variant && (
+                            <span style={{ 
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              background: '#FFF5F2',
+                              border: '1px solid #FF6B35',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              color: '#FF6B35',
+                              fontWeight: 600,
+                              marginBottom: '4px'
+                            }}>
+                              Varian: {item.variant}
+                            </span>
+                          )}
                           <p className="cart-item-price">Rp {item.price.toLocaleString()}</p>
                           {item.min_order && item.min_order > 1 && (
                             <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>

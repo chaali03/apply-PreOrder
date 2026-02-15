@@ -858,16 +858,20 @@ func main() {
 			})
 		}
 
-		// Parse update data
-		var updateData Product
-		if err := c.BodyParser(&updateData); err != nil {
+		// Parse update data including variants
+		var requestData struct {
+			Product
+			Variants []ProductVariant `json:"variants"`
+		}
+		if err := c.BodyParser(&requestData); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
 				"message": "Invalid request body",
 			})
 		}
 
-		// Update fields
+		// Update product fields
+		updateData := requestData.Product
 		result := DB.Model(&product).Updates(updateData)
 		if result.Error != nil {
 			log.Printf("Error updating product: %v", result.Error)
@@ -876,6 +880,51 @@ func main() {
 				"message": "Failed to update product",
 			})
 		}
+
+		// Handle variants update - always delete and recreate
+		// Delete existing variants first
+		DB.Where("product_id = ?", id).Delete(&ProductVariant{})
+		
+		// Create new variants if provided
+		if len(requestData.Variants) > 0 {
+			log.Printf("📦 Received %d variants for product %s", len(requestData.Variants), id)
+			
+			// Filter and prepare valid variants - create new objects without ID
+			var validVariants []ProductVariant
+			for _, v := range requestData.Variants {
+				if v.Name != "" {
+					stock := v.Stock
+					if stock == 0 {
+						stock = 100
+					}
+					// Create new variant object (without ID so PostgreSQL generates it)
+					newVariant := ProductVariant{
+						ProductID:   id,
+						Name:        v.Name,
+						Price:       v.Price,
+						Stock:       stock,
+						IsAvailable: v.IsAvailable,
+					}
+					validVariants = append(validVariants, newVariant)
+					log.Printf("  - Variant: %s, Price: %.0f, Available: %v", v.Name, v.Price, v.IsAvailable)
+				}
+			}
+			
+			if len(validVariants) > 0 {
+				if err := DB.Create(&validVariants).Error; err != nil {
+					log.Printf("❌ Error creating variants: %v", err)
+				} else {
+					log.Printf("✅ Created %d variants successfully", len(validVariants))
+				}
+			}
+		} else {
+			log.Printf("📦 No variants received for product %s", id)
+		}
+
+		// Reload product with variants
+		DB.Preload("Variants").First(&product, "id = ?", id)
+
+		log.Printf("✅ Product updated: %s with %d variants", product.Name, len(product.Variants))
 
 		return c.JSON(fiber.Map{
 			"success": true,
@@ -1513,16 +1562,19 @@ func main() {
 
 		report := ReportData{}
 
-		// Get total revenue and orders
+		// Excluded statuses: cancelled orders should not be counted
+		excludedStatuses := []string{"cancelled", "deleted"}
+
+		// Get total revenue and orders (all orders except cancelled/deleted)
 		DB.Model(&Order{}).
-			Where("payment_status = ? AND DATE(created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Where("order_status NOT IN ? AND DATE(created_at) BETWEEN ? AND ?", excludedStatuses, startDate, endDate).
 			Select("COALESCE(SUM(total), 0) as total_revenue, COUNT(*) as total_orders").
 			Scan(&report)
 
-		// Get total products sold
+		// Get total products sold (all orders except cancelled/deleted)
 		DB.Table("order_items").
 			Joins("JOIN orders ON order_items.order_id = orders.id").
-			Where("orders.payment_status = ? AND DATE(orders.created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Where("orders.order_status NOT IN ? AND DATE(orders.created_at) BETWEEN ? AND ?", excludedStatuses, startDate, endDate).
 			Select("COALESCE(SUM(order_items.quantity), 0)").
 			Scan(&report.TotalProductsSold)
 
@@ -1531,23 +1583,23 @@ func main() {
 			report.AverageOrderValue = report.TotalRevenue / float64(report.TotalOrders)
 		}
 
-		// Get product sales
+		// Get product sales (all orders except cancelled/deleted)
 		var productSales []ProductSales
 		DB.Table("products").
 			Select("products.id as product_id, products.name as product_name, COALESCE(SUM(order_items.quantity), 0) as total_quantity, COALESCE(SUM(order_items.subtotal), 0) as total_revenue, COUNT(DISTINCT orders.id) as order_count").
 			Joins("LEFT JOIN order_items ON products.id = order_items.product_id").
-			Joins("LEFT JOIN orders ON order_items.order_id = orders.id AND orders.payment_status = ? AND DATE(orders.created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Joins("LEFT JOIN orders ON order_items.order_id = orders.id AND orders.order_status NOT IN ? AND DATE(orders.created_at) BETWEEN ? AND ?", excludedStatuses, startDate, endDate).
 			Group("products.id, products.name").
 			Having("COALESCE(SUM(order_items.quantity), 0) > 0").
 			Order("total_revenue DESC").
 			Scan(&productSales)
 		report.ProductSales = productSales
 
-		// Get daily sales
+		// Get daily sales (all orders except cancelled/deleted)
 		var dailySales []DailySales
 		DB.Table("orders").
 			Select("DATE(created_at) as date, COALESCE(SUM(total), 0) as revenue, COUNT(*) as orders").
-			Where("payment_status = ? AND DATE(created_at) BETWEEN ? AND ?", "paid", startDate, endDate).
+			Where("order_status NOT IN ? AND DATE(created_at) BETWEEN ? AND ?", excludedStatuses, startDate, endDate).
 			Group("DATE(created_at)").
 			Order("date ASC").
 			Scan(&dailySales)
