@@ -1,0 +1,7 @@
+tunnel: bae826f0-e474-4353-a653-a9bc77855136
+credentials-file: /etc/cloudflared/bae826f0-e474-4353-a653-a9bc77855136.json
+
+ingress:
+  - hostname: api.scafffood.my.id
+    service: http://api:8080
+  - service: http_status:404

@@ -64,7 +64,7 @@ export default function DashboardOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders`);
       const data = await response.json();
       
       if (data.success) {
@@ -110,7 +110,7 @@ export default function DashboardOrdersPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -140,7 +140,7 @@ export default function DashboardOrdersPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToCancel.id}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders/${orderToCancel.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -218,7 +218,7 @@ export default function DashboardOrdersPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToComplete.id}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders/${orderToComplete.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -257,7 +257,7 @@ export default function DashboardOrdersPage() {
     if (!orderToDelete) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderToDelete.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders/${orderToDelete.id}`, {
         method: 'DELETE'
       });
 
@@ -575,7 +575,7 @@ export default function DashboardOrdersPage() {
                     {order.payment_proof && (
                       <button
                         onClick={() => {
-                          setSelectedPaymentProof(`${process.env.NEXT_PUBLIC_API_URL}${order.payment_proof}`);
+                          setSelectedPaymentProof(`${process.env.NEXT_PUBLIC_BACKEND_URL}${order.payment_proof}`);
                           setShowPaymentProofModal(true);
                         }}
                         className="btn-view-proof"

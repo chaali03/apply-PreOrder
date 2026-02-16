@@ -1,10 +1,13 @@
 // API helper for fetching from backend
-// Now uses Next.js API proxy at /api/* which forwards to backend
+// Directly calls backend API (no proxy needed)
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  // All API calls now go through Next.js API proxy
-  // No need for config.json anymore
-  const url = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+  // Get backend URL from environment
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  
+  // Remove leading slash if present
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  const url = `${backendUrl}/${cleanEndpoint}`;
   
   const headers = {
     'Content-Type': 'application/json',
@@ -16,7 +19,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 }
 
 // For backward compatibility
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+export const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 export async function getApiBaseUrl(): Promise<string> {
-  return '';
+  return API_URL;
 }

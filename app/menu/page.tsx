@@ -8,6 +8,15 @@ import { Spinner } from '../../components/ui/ios-spinner';
 import { fetchAPI } from '@/lib/fetch-api';
 import './menu.css';
 
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  price: number;
+  stock: number;
+  is_available: boolean;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -21,6 +30,7 @@ interface Product {
   tag: string;
   tag_color: string;
   is_available: boolean;
+  variants?: ProductVariant[];
 }
 
 export default function MenuPage() {
@@ -66,7 +76,12 @@ export default function MenuPage() {
     let filtered = products;
 
     if (selectedCategory !== "All") {
-      filtered = filtered.filter(p => p.category === selectedCategory);
+      // Support multiple categories (comma-separated)
+      filtered = filtered.filter(p => {
+        if (!p.category) return false;
+        const productCategories = p.category.split(',').map(c => c.trim());
+        return productCategories.includes(selectedCategory);
+      });
     }
 
     if (searchQuery) {
@@ -155,6 +170,15 @@ export default function MenuPage() {
             <div className="products-grid">
               {filteredProducts.map((product) => {
                 console.log(`Rendering product ${product.name}: is_available=${product.is_available}`);
+                // Fix image path: if it's a full URL or starts with /, use it; otherwise prepend /produk/
+                const getImagePath = (url: string) => {
+                  if (!url) return '/produk/placeholder.svg';
+                  if (url.startsWith('http')) return url; // Full URL from backend
+                  if (url.startsWith('/produk/')) return url; // Already correct path
+                  if (url.startsWith('/')) return url; // Other absolute path
+                  return `/produk/${url}`; // Relative filename, add /produk/
+                };
+                
                 return (
                   <div key={product.id} className={`product-card ${!product.is_available ? 'product-sold-out' : ''}`}>
                     <span className="product-tag" style={{ background: product.tag_color }}>
@@ -163,7 +187,7 @@ export default function MenuPage() {
                     {product.is_available ? (
                       <Link href={`/menu/${product.id}`}>
                         <img 
-                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          src={getImagePath(product.image_url_1)} 
                           alt={product.name} 
                           className="product-image" 
                         />
@@ -171,7 +195,7 @@ export default function MenuPage() {
                     ) : (
                       <div className="product-image-disabled">
                         <img 
-                          src={product.image_url_1 || '/produk/placeholder.svg'} 
+                          src={getImagePath(product.image_url_1)} 
                           alt={product.name} 
                           className="product-image" 
                         />
@@ -187,6 +211,45 @@ export default function MenuPage() {
                         <h3 className="product-name">{product.name}</h3>
                         <span className="product-price">Rp {product.price.toLocaleString()}</span>
                       </div>
+                      {/* Variant tags */}
+                      {product.variants && product.variants.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+                          {product.variants.slice(0, 3).map((variant) => (
+                            <span 
+                              key={variant.id} 
+                              style={{ 
+                                background: '#f0f0f0', 
+                                color: '#1a1a1a',
+                                padding: '3px 8px', 
+                                fontSize: '10px', 
+                                fontWeight: 600,
+                                border: '1px solid #ddd',
+                                borderRadius: '3px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.3px'
+                              }}
+                            >
+                              {variant.name}
+                            </span>
+                          ))}
+                          {product.variants.length > 3 && (
+                            <span 
+                              style={{ 
+                                background: '#f0f0f0', 
+                                color: '#1a1a1a',
+                                padding: '3px 8px', 
+                                fontSize: '10px', 
+                                fontWeight: 600,
+                                border: '1px solid #ddd',
+                                borderRadius: '3px',
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              +{product.variants.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="product-description">{product.short_description}</p>
                       {product.is_available ? (
                         <Link href={`/menu/${product.id}`}>

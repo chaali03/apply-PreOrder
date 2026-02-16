@@ -1,4 +1,5 @@
 import type React from "react"
+// @ts-ignore - Next.js 15 type issue
 import type { Metadata } from "next"
 import { Space_Grotesk } from "next/font/google"
 import "./globals.css"
@@ -11,8 +12,12 @@ export const metadata: Metadata = {
     "Serving 70s aesthetics with a modern twist. Locally sourced, highkey delicious, and strictly for the vibers.",
   generator: "v0.app",
   icons: {
-    // Use existing icon in /public to avoid 404s
-    icon: "/icon.svg",
+    icon: [
+      { url: "/favicon_io/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon_io/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon_io/favicon.ico" },
+    ],
+    apple: "/favicon_io/apple-touch-icon.png",
   },
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+// @ts-ignore - Next.js 15 compatibility
 import { useParams, useRouter } from 'next/navigation';
 import MobileMenu from '../../../components/ui/mobile-menu';
 import CurvedMenu from '../../../components/ui/curved-menu';
@@ -130,9 +131,10 @@ export default function ProductDetailPage() {
   // Helper to get full image URL
   const getImageUrl = (url: string | undefined) => {
     if (!url) return '/produk/placeholder.svg';
-    if (url.startsWith('http')) return url;
-    // Images are served from Next.js public folder, not backend
-    return url;
+    if (url.startsWith('http')) return url; // Full URL
+    if (url.startsWith('/produk/')) return url; // Already correct
+    if (url.startsWith('/')) return url; // Other absolute path
+    return `/produk/${url}`; // Relative filename
   };
 
   const productImages = [

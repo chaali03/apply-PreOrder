@@ -67,7 +67,7 @@ export default function LaporanPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/reports?start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/reports?start_date=${dateRange.start}&end_date=${dateRange.end}`
       );
       const data = await response.json();
       

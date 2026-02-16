@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+// @ts-ignore - Next.js 15 type issue
 import { useSearchParams } from 'next/navigation';
 import MobileMenu from '../../components/ui/mobile-menu';
 import CurvedMenu from '../../components/ui/curved-menu';
@@ -76,7 +77,7 @@ function KurirContent() {
 
     const fetchOrders = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/customer/${encodeURIComponent(customerPhone)}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders/customer/${encodeURIComponent(customerPhone)}`);
         const data = await response.json();
         
         if (data.success) {

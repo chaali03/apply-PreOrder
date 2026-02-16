@@ -421,6 +421,11 @@
 
 /* Mobile Responsive Styles */
 @media (max-width: 640px) {
+  .login-container {
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
   .login-content {
     padding: 1.5rem;
     max-width: 100%;

@@ -19,12 +19,12 @@ export default function QRISSettingsPage() {
 
   const fetchQRISImage = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings?key=qris_image`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/settings?key=qris_image`);
       const data = await response.json();
       
       if (data.success && data.data.value) {
         const value = data.data.value as string;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
         setQrisImage(absoluteUrl);
       }
@@ -59,7 +59,7 @@ export default function QRISSettingsPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/upload`, {
         method: 'POST',
         body: formData
       });
@@ -68,7 +68,7 @@ export default function QRISSettingsPage() {
 
       if (uploadData.success) {
         // Simpan URL absolut supaya bisa diakses dari Netlify (domain backend)
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         const absoluteUrl = uploadData.url.startsWith('http')
           ? uploadData.url
           : `${baseUrl}${uploadData.url}`;
@@ -95,7 +95,7 @@ export default function QRISSettingsPage() {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

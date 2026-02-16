@@ -74,7 +74,7 @@ export default function DashboardMenuPage() {
     if (showLoading) {
       setLoading(true);
     }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`)
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products`)
       .then(res => res.json())
       .then(data => {
         console.log('Fetched products:', data);
@@ -161,7 +161,7 @@ export default function DashboardMenuPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/upload`, {
         method: 'POST',
         body: formData
       });
@@ -257,8 +257,8 @@ export default function DashboardMenuPage() {
     console.log('Submitting variants:', validVariants);
     
     const url = modalMode === "add" 
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`
-      : `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${selectedProduct?.id}`;
+      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products`
+      : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${selectedProduct?.id}`;
     
     const method = modalMode === "add" ? 'POST' : 'PUT';
 
@@ -299,7 +299,7 @@ export default function DashboardMenuPage() {
     if (!productToDelete) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${productToDelete.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${productToDelete.id}`, {
         method: 'DELETE'
       });
 
@@ -328,7 +328,7 @@ export default function DashboardMenuPage() {
     try {
       console.log('Toggling product:', product.id, 'Current availability:', product.is_available);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${product.id}/toggle`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${product.id}/toggle`, {
         method: 'PATCH'
       });
 

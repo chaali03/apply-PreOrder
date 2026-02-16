@@ -3,6 +3,7 @@
 import './login.css';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+// @ts-ignore - Next.js 15 type issue
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
@@ -45,7 +46,8 @@ function LoginContent() {
     e.preventDefault();
     if (email) {
       try {
-        const response = await fetch('/api/auth/send-code', {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        const response = await fetch(`${backendUrl}/api/auth/send-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -116,7 +118,8 @@ function LoginContent() {
     if (!canResend) return;
     
     try {
-      const response = await fetch('/api/auth/send-code', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/auth/send-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +147,8 @@ function LoginContent() {
       const codeString = code.join("");
       
       try {
-        const response = await fetch('/api/auth/verify-code', {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        const response = await fetch(`${backendUrl}/api/auth/verify-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

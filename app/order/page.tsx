@@ -85,14 +85,14 @@ export default function OrderPage() {
 
   const fetchQRISImage = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings?key=qris_image`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/settings?key=qris_image`);
       const data = await response.json();
       
       console.log('QRIS API response:', data);
       
       if (data.success && data.data.value) {
         const value = data.data.value as string;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
         console.log('QRIS URL:', absoluteUrl);
         setQrCodeUrl(absoluteUrl);
@@ -279,7 +279,7 @@ export default function OrderPage() {
           const formData = new FormData();
           formData.append('image', blob, 'payment-proof.jpg');
 
-          const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+          const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/upload`, {
             method: 'POST',
             body: formData
           });
@@ -322,7 +322,7 @@ export default function OrderPage() {
 
       console.log('📦 Submitting order:', orderData);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
