@@ -120,24 +120,36 @@ export default function OrderPage() {
   };
 
   const downloadQR = async () => {
-    if (qrCodeUrl) {
-      try {
-        // Try to download using fetch with no-cors mode
-        const response = await fetch(qrCodeUrl, { mode: 'no-cors' });
-        
-        // If fetch fails, fallback to opening in new tab
-        if (!response.ok && response.type !== 'opaque') {
-          throw new Error('Fetch failed');
-        }
-        
-        // For cross-origin images, just open in new tab
-        // User can right-click and save from there
-        window.open(qrCodeUrl, '_blank');
-      } catch (error) {
-        console.error('Error downloading QR:', error);
-        // Fallback: open in new tab
-        window.open(qrCodeUrl, '_blank');
+    if (!qrCodeUrl) return;
+
+    try {
+      // Check if it's a data URL (base64)
+      if (qrCodeUrl.startsWith('data:')) {
+        // Direct download for data URLs
+        const link = document.createElement('a');
+        link.href = qrCodeUrl;
+        link.download = `QRIS-SCAFFFOOD-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
       }
+
+      // Use Next.js API route as proxy to avoid CORS
+      const downloadUrl = `/api/download-qr?url=${encodeURIComponent(qrCodeUrl)}`;
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `QRIS-SCAFFFOOD-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Error downloading QR:', error);
+      
+      // Fallback: open in new tab
+      window.open(qrCodeUrl, '_blank');
     }
   };
 
@@ -635,7 +647,7 @@ export default function OrderPage() {
                               <polyline points="7 10 12 15 17 10"></polyline>
                               <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Lihat QR
+                            Download QR
                           </button>
                         </>
                       ) : (
