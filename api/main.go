@@ -51,6 +51,7 @@ type Product struct {
 	IsAvailable      bool             `gorm:"default:true" json:"is_available"`
 	MinOrder         int              `gorm:"default:1" json:"min_order"`
 	Conditions       string           `gorm:"type:jsonb;default:'[]'" json:"conditions,omitempty"`
+	Addons           string           `gorm:"type:jsonb;default:'[]'" json:"addons,omitempty"`
 	QRISId           *string          `gorm:"type:uuid" json:"qris_id,omitempty"`
 	Variants         []ProductVariant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
 	CreatedAt        time.Time        `json:"created_at"`

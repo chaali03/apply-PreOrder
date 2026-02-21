@@ -23,6 +23,7 @@ interface Product {
   min_order: number;
   variants?: ProductVariant[];
   conditions?: ProductCondition[];
+  addons?: ProductAddon[];
   qris_id?: string;
 }
 
@@ -37,6 +38,11 @@ interface ProductVariant {
 interface ProductCondition {
   name: string;
   price_adjustment: number;
+}
+
+interface ProductAddon {
+  name: string;
+  price: number;
 }
 
 interface QRISCode {
@@ -85,6 +91,10 @@ export default function DashboardMenuPage() {
 
   const [conditions, setConditions] = useState<ProductCondition[]>([
     { name: "", price_adjustment: 0 }
+  ]);
+
+  const [addons, setAddons] = useState<ProductAddon[]>([
+    { name: "", price: 0 }
   ]);
 
   const [qrisCodes, setQrisCodes] = useState<QRISCode[]>([]);
@@ -189,6 +199,22 @@ export default function DashboardMenuPage() {
     }
   };
 
+  const addAddonField = () => {
+    setAddons([...addons, { name: "", price: 0 }]);
+  };
+
+  const removeAddonField = (index: number) => {
+    if (addons.length > 1) {
+      setAddons(addons.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAddonChange = (index: number, field: keyof ProductAddon, value: string | number) => {
+    const newAddons = [...addons];
+    newAddons[index] = { ...newAddons[index], [field]: value };
+    setAddons(newAddons);
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, imageNumber: 1 | 2 | 3) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -261,6 +287,9 @@ export default function DashboardMenuPage() {
     setConditions([
       { name: "", price_adjustment: 0 }
     ]);
+    setAddons([
+      { name: "", price: 0 }
+    ]);
     setSelectedQRISId("");
     setShowModal(true);
   };
@@ -312,6 +341,25 @@ export default function DashboardMenuPage() {
     } else {
       setConditions([{ name: "", price_adjustment: 0 }]);
     }
+    // Load existing addons or create empty one
+    if (product.addons) {
+      try {
+        const parsedAddons = typeof product.addons === 'string' 
+          ? JSON.parse(product.addons)
+          : product.addons;
+        
+        if (Array.isArray(parsedAddons) && parsedAddons.length > 0) {
+          setAddons(parsedAddons);
+        } else {
+          setAddons([{ name: "", price: 0 }]);
+        }
+      } catch (e) {
+        console.error('Error parsing addons:', e);
+        setAddons([{ name: "", price: 0 }]);
+      }
+    } else {
+      setAddons([{ name: "", price: 0 }]);
+    }
     // Load QRIS selection
     setSelectedQRISId(product.qris_id || "");
     setShowModal(true);
@@ -332,9 +380,13 @@ export default function DashboardMenuPage() {
     // Filter out empty conditions
     const validConditions = conditions.filter(c => c.name && c.name.trim() !== '');
     
+    // Filter out empty addons
+    const validAddons = addons.filter(a => a.name && a.name.trim() !== '');
+    
     console.log('Submitting product data:', formData);
     console.log('Submitting variants:', validVariants);
     console.log('Submitting conditions:', validConditions);
+    console.log('Submitting addons:', validAddons);
     
     const url = modalMode === "add" 
       ? `/api/admin/products`
@@ -345,7 +397,8 @@ export default function DashboardMenuPage() {
     const payload: any = {
       ...formData,
       variants: validVariants,
-      conditions: validConditions
+      conditions: validConditions,
+      addons: validAddons
     };
     
     // Only add qris_id if it has a valid value, otherwise explicitly set to null
@@ -1003,35 +1056,183 @@ export default function DashboardMenuPage() {
                   ))}
                 </div>
 
+                {/* Addons Section */}
+                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#f0fdf4', border: '2px solid #22c55e', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <label style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                      Tambahan (Add-ons) Opsional
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addAddonField}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#22c55e',
+                        color: 'white',
+                        border: '2px solid #1a1a1a',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Tambah Add-on
+                    </button>
+                  </div>
+                  <small style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '16px' }}>
+                    Contoh: Extra Keju, Saos Pedas, Mayones, dll. Customer bisa memilih tambahan ini dengan biaya tambahan.
+                  </small>
+
+                  {addons.map((addon, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: '16px', 
+                      padding: '16px', 
+                      background: 'white', 
+                      border: '2px solid #1a1a1a',
+                      borderRadius: '8px',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <strong style={{ fontSize: '14px' }}>Add-on {index + 1}</strong>
+                        {addons.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeAddonField(index)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#ff3b30',
+                              color: 'white',
+                              border: '2px solid #1a1a1a',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 700
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Nama Add-on *</label>
+                          <input
+                            type="text"
+                            value={addon.name}
+                            onChange={(e) => handleAddonChange(index, 'name', e.target.value)}
+                            placeholder="Contoh: Extra Keju, Saos Pedas"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Harga Tambahan *</label>
+                          <input
+                            type="number"
+                            value={addon.price}
+                            onChange={(e) => handleAddonChange(index, 'price', Number(e.target.value))}
+                            placeholder="Contoh: 5000"
+                            min="0"
+                          />
+                          <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                            Harga tambahan untuk add-on ini (contoh: 5000 untuk +Rp 5.000)
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 {/* QRIS Selection */}
-                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#fff5f2', border: '2px solid #ff6b35' }}>
+                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#fff5f2', border: '2px solid #ff6b35', borderRadius: '8px' }}>
                   <label style={{ margin: 0, fontSize: '16px', fontWeight: 700, marginBottom: '12px', display: 'block' }}>
                     Pilih QRIS untuk Produk Ini
                   </label>
                   <small style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '12px' }}>
                     QRIS yang dipilih akan ditampilkan saat customer checkout produk ini
                   </small>
-                  <select
-                    value={selectedQRISId}
-                    onChange={(e) => setSelectedQRISId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '2px solid #1a1a1a',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      background: 'white'
-                    }}
-                  >
-                    <option value="">Tidak ada QRIS (gunakan default)</option>
-                    {qrisCodes.map((qris) => (
-                      <option key={qris.id} value={qris.id}>
-                        {qris.name}
-                      </option>
-                    ))}
-                  </select>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <select
+                      value={selectedQRISId}
+                      onChange={(e) => setSelectedQRISId(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: '2px solid #1a1a1a',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: 'white',
+                        fontWeight: selectedQRISId ? '600' : 'normal'
+                      }}
+                    >
+                      <option value="">-- Tidak Menggunakan QRIS --</option>
+                      {qrisCodes.map((qris) => (
+                        <option key={qris.id} value={qris.id}>
+                          {qris.name}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    {selectedQRISId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQRISId("")}
+                        style={{
+                          padding: '0 16px',
+                          background: '#ff3b30',
+                          border: '2px solid #1a1a1a',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s',
+                          fontSize: '14px'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#e02d23'}
+                        onMouseOut={(e) => e.currentTarget.style.background = '#ff3b30'}
+                        title="Batalkan pilihan QRIS"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Batalkan
+                      </button>
+                    )}
+                  </div>
+                  
+                  {selectedQRISId && (
+                    <div style={{ 
+                      marginTop: '12px', 
+                      padding: '10px 12px', 
+                      background: '#e8f5e9', 
+                      border: '2px solid #4caf50',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      color: '#2e7d32',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      QRIS dipilih: {qrisCodes.find(q => q.id === selectedQRISId)?.name}
+                    </div>
+                  )}
+                  
                   {qrisCodes.length === 0 && (
-                    <small style={{ color: '#ff6b35', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                    <small style={{ color: '#ff6b35', fontSize: '12px', display: 'block', marginTop: '8px', fontWeight: '600' }}>
                       ⚠️ Belum ada QRIS. <a href="/dashboard/qris" style={{ color: '#ff6b35', textDecoration: 'underline' }}>Tambah QRIS</a>
                     </small>
                   )}
