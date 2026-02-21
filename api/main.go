@@ -1214,7 +1214,7 @@ func main() {
 		if count > 0 {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
-				"message": fmt.Sprintf("Cannot delete QRIS. %d product(s) are still using it", count),
+				"message": fmt.Sprintf("Tidak dapat menghapus QRIS. Masih digunakan oleh %d produk", count),
 			})
 		}
 
