@@ -165,6 +165,9 @@ export default function QRISSettingsPage() {
   const confirmDelete = async () => {
     if (!qrisToDelete) return;
 
+    // Close modal first
+    setShowDeleteModal(false);
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/qris/${qrisToDelete.id}`, {
         method: 'DELETE'
@@ -176,13 +179,13 @@ export default function QRISSettingsPage() {
         showNotif('QRIS berhasil dihapus');
         fetchQRISCodes();
       } else {
+        // Show error message as toast
         showNotif(data.message || 'Gagal menghapus QRIS');
       }
     } catch (error) {
       console.error('Error deleting QRIS:', error);
       showNotif('Gagal terhubung ke server');
     } finally {
-      setShowDeleteModal(false);
       setQrisToDelete(null);
     }
   };
@@ -570,16 +573,8 @@ export default function QRISSettingsPage() {
                 </div>
                 <h3>Hapus QRIS?</h3>
                 <p className="delete-message">
-                  Apakah Anda yakin ingin menghapus <strong>{qrisToDelete.name}</strong>?
+                  Apakah Anda yakin ingin menghapus <strong>{qrisToDelete.name}</strong>? Tindakan ini tidak dapat dibatalkan.
                 </p>
-                <div className="delete-warning">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                  </svg>
-                  <span>QRIS yang sedang digunakan oleh produk tidak dapat dihapus</span>
-                </div>
               </div>
 
               <div className="modal-footer">
