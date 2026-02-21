@@ -79,6 +79,38 @@ type QRISCode struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Event model
+type Event struct {
+	ID          string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Title       string    `gorm:"not null" json:"title"`
+	Description string    `gorm:"type:text" json:"description"`
+	ImageURL    string    `gorm:"type:text;not null" json:"image_url"`
+	MusicURL    string    `gorm:"type:text" json:"music_url,omitempty"`
+	MusicTitle  string    `json:"music_title,omitempty"`
+	IsActive    bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// EventComment model
+type EventComment struct {
+	ID            string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	EventID       string    `gorm:"type:uuid;not null" json:"event_id"`
+	ParentID      *string   `gorm:"type:uuid" json:"parent_id,omitempty"`
+	CommenterName string    `gorm:"not null" json:"commenter_name"`
+	CommentText   string    `gorm:"type:text;not null" json:"comment_text"`
+	IsAdmin       bool      `gorm:"default:false" json:"is_admin"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// EventWithComments for response
+type EventWithComments struct {
+	Event
+	CommentCount int            `json:"comment_count"`
+	Comments     []EventComment `json:"comments,omitempty"`
+}
+
 // Order model
 type Order struct {
 	ID                   string     `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
@@ -1841,6 +1873,373 @@ func main() {
 		log.Printf("📊 Report generated: %s to %s", startDate, endDate)
 
 		return c.JSON(report)
+	})
+
+	// ==================== EVENTS SYSTEM ====================
+	
+	// Get all active events (public)
+	app.Get("/api/events", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var events []Event
+		result := DB.Where("is_active = ?", true).Order("created_at DESC").Find(&events)
+		if result.Error != nil {
+			log.Printf("Error fetching events: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch events",
+			})
+		}
+
+		// Get comment count for each event
+		var eventsWithCount []EventWithComments
+		for _, event := range events {
+			var commentCount int64
+			DB.Model(&EventComment{}).Where("event_id = ?", event.ID).Count(&commentCount)
+			
+			eventsWithCount = append(eventsWithCount, EventWithComments{
+				Event:        event,
+				CommentCount: int(commentCount),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    eventsWithCount,
+		})
+	})
+
+	// Get single event with comments (public)
+	app.Get("/api/events/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var event Event
+		
+		if err := DB.Where("id = ? AND is_active = ?", id, true).First(&event).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Event not found",
+			})
+		}
+
+		// Get comments (only top-level, replies will be nested)
+		var comments []EventComment
+		DB.Where("event_id = ? AND parent_id IS NULL", id).Order("created_at DESC").Find(&comments)
+
+		// Get comment count
+		var commentCount int64
+		DB.Model(&EventComment{}).Where("event_id = ?", id).Count(&commentCount)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data": EventWithComments{
+				Event:        event,
+				CommentCount: int(commentCount),
+				Comments:     comments,
+			},
+		})
+	})
+
+	// Get replies for a comment (public)
+	app.Get("/api/events/:eventId/comments/:commentId/replies", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		commentId := c.Params("commentId")
+		var replies []EventComment
+		
+		DB.Where("parent_id = ?", commentId).Order("created_at ASC").Find(&replies)
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    replies,
+		})
+	})
+
+	// Add comment to event (public)
+	app.Post("/api/events/:id/comments", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		
+		var requestData struct {
+			CommenterName string  `json:"commenter_name"`
+			CommentText   string  `json:"comment_text"`
+			ParentID      *string `json:"parent_id"`
+		}
+		
+		if err := c.BodyParser(&requestData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		// Validate
+		if requestData.CommenterName == "" || requestData.CommentText == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Name and comment are required",
+			})
+		}
+
+		comment := EventComment{
+			EventID:       id,
+			ParentID:      requestData.ParentID,
+			CommenterName: requestData.CommenterName,
+			CommentText:   requestData.CommentText,
+			IsAdmin:       false,
+		}
+
+		if err := DB.Create(&comment).Error; err != nil {
+			log.Printf("Error creating comment: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create comment",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    comment,
+			"message": "Comment added successfully",
+		})
+	})
+
+	// Admin: Get all events
+	app.Get("/api/admin/events", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var events []Event
+		result := DB.Order("created_at DESC").Find(&events)
+		if result.Error != nil {
+			log.Printf("Error fetching events: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch events",
+			})
+		}
+
+		// Get comment count for each event
+		var eventsWithCount []EventWithComments
+		for _, event := range events {
+			var commentCount int64
+			DB.Model(&EventComment{}).Where("event_id = ?", event.ID).Count(&commentCount)
+			
+			eventsWithCount = append(eventsWithCount, EventWithComments{
+				Event:        event,
+				CommentCount: int(commentCount),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    eventsWithCount,
+		})
+	})
+
+	// Admin: Create event
+	app.Post("/api/admin/events", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var event Event
+		if err := c.BodyParser(&event); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		event.IsActive = true
+		
+		if err := DB.Create(&event).Error; err != nil {
+			log.Printf("Error creating event: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create event",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    event,
+			"message": "Event created successfully",
+		})
+	})
+
+	// Admin: Update event
+	app.Put("/api/admin/events/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var event Event
+		
+		if err := DB.First(&event, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Event not found",
+			})
+		}
+
+		var updateData Event
+		if err := c.BodyParser(&updateData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		if err := DB.Model(&event).Updates(updateData).Error; err != nil {
+			log.Printf("Error updating event: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update event",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    event,
+			"message": "Event updated successfully",
+		})
+	})
+
+	// Admin: Delete event
+	app.Delete("/api/admin/events/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		
+		if err := DB.Delete(&Event{}, "id = ?", id).Error; err != nil {
+			log.Printf("Error deleting event: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to delete event",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Event deleted successfully",
+		})
+	})
+
+	// Admin: Add comment (verified)
+	app.Post("/api/admin/events/:id/comments", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		
+		var requestData struct {
+			CommentText string  `json:"comment_text"`
+			ParentID    *string `json:"parent_id"`
+		}
+		
+		if err := c.BodyParser(&requestData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		if requestData.CommentText == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Comment text is required",
+			})
+		}
+
+		comment := EventComment{
+			EventID:       id,
+			ParentID:      requestData.ParentID,
+			CommenterName: "SCAFF*FOOD",
+			CommentText:   requestData.CommentText,
+			IsAdmin:       true,
+		}
+
+		if err := DB.Create(&comment).Error; err != nil {
+			log.Printf("Error creating admin comment: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create comment",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    comment,
+			"message": "Comment added successfully",
+		})
+	})
+
+	// Admin: Delete comment
+	app.Delete("/api/admin/events/:eventId/comments/:commentId", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		commentId := c.Params("commentId")
+		
+		if err := DB.Delete(&EventComment{}, "id = ?", commentId).Error; err != nil {
+			log.Printf("Error deleting comment: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to delete comment",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Comment deleted successfully",
+		})
 	})
 
 	// Start server

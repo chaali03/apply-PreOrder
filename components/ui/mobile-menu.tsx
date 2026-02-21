@@ -41,6 +41,12 @@ const defaultNavItems: iNavItem[] = [
 		imgSrc: "/images/menu.jpg",
 	},
 	{
+		heading: "Event",
+		href: "/event",
+		subheading: "Event & Promo",
+		imgSrc: "/images/event.jpg",
+	},
+	{
 		heading: "Kurir",
 		href: "/kurir",
 		subheading: "Pelayanan Pengantar",

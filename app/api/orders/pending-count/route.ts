@@ -7,19 +7,24 @@ export async function GET() {
     const response = await fetch(`${backendUrl}/api/orders`, {
       headers: {
         'ngrok-skip-browser-warning': '1'
-      }
+      },
+      cache: 'no-store'
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch orders');
+      console.error('Failed to fetch orders:', response.status);
+      return NextResponse.json({
+        success: false,
+        count: 0
+      });
     }
 
     const data = await response.json();
     
     // Count orders with status "processing" (diterima/menunggu)
-    const pendingCount = data.filter((order: any) => 
+    const pendingCount = Array.isArray(data) ? data.filter((order: any) => 
       order.order_status === 'processing'
-    ).length;
+    ).length : 0;
 
     return NextResponse.json({
       success: true,
@@ -27,9 +32,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching pending orders count:', error);
+    // Return 0 instead of 500 error to prevent UI errors
     return NextResponse.json({
       success: false,
       count: 0
-    }, { status: 500 });
+    });
   }
 }

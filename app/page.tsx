@@ -188,6 +188,7 @@ export default function Home() {
         <nav>
           <Link href="/" prefetch={true}>Home</Link>
           <Link href="/menu" prefetch={true}>Menu</Link>
+          <Link href="/event" prefetch={true}>Event</Link>
           <Link href="/kurir" prefetch={true}>Kurir</Link>
           <Link href="/locations" prefetch={true}>Locations</Link>
         </nav>

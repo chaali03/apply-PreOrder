@@ -107,6 +107,7 @@ export default function ProductDetailPage() {
           <nav>
             <Link href="/">Home</Link>
             <Link href="/menu">Menu</Link>
+            <Link href="/event">Event</Link>
             <Link href="/kurir">Kurir</Link>
             <Link href="/locations">Locations</Link>
           </nav>
