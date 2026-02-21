@@ -24,6 +24,7 @@ interface iCurvedNavbarProps {
 
 interface iHeaderProps {
 	navItems?: iNavItem[];
+	pendingOrdersCount?: number;
 }
 
 const defaultNavItems: iNavItem[] = [
@@ -166,6 +167,7 @@ const CurvedNavbar: React.FC<iCurvedNavbarProps> = ({setIsActive, navItems}) => 
 
 const Header: React.FC<iHeaderProps> = ({
 	navItems = defaultNavItems,
+	pendingOrdersCount = 0,
 }) => {
 	const [isActive, setIsActive] = useState(false);
 
@@ -181,6 +183,7 @@ const Header: React.FC<iHeaderProps> = ({
 					onClick={handleClick}
 					className="hamburger-button"
 					aria-label={isActive ? "Close menu" : "Open menu"}
+					style={{ position: 'relative' }}
 				>
 					<div className="hamburger-icon">
 						<span
@@ -199,6 +202,29 @@ const Header: React.FC<iHeaderProps> = ({
 							}`}
 						></span>
 					</div>
+					{pendingOrdersCount > 0 && (
+						<span style={{
+							position: 'absolute',
+							top: '-4px',
+							right: '-4px',
+							background: '#ef4444',
+							color: 'white',
+							borderRadius: '50%',
+							width: '20px',
+							height: '20px',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							fontSize: '10px',
+							fontWeight: 700,
+							border: '2px solid white',
+							boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+							animation: 'pulse 2s infinite',
+							zIndex: 10
+						}}>
+							{pendingOrdersCount > 99 ? '99+' : pendingOrdersCount}
+						</span>
+					)}
 				</button>
 			</div>
 

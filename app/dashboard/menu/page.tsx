@@ -22,6 +22,8 @@ interface Product {
   is_available: boolean;
   min_order: number;
   variants?: ProductVariant[];
+  conditions?: ProductCondition[];
+  qris_id?: string;
 }
 
 interface ProductVariant {
@@ -30,6 +32,18 @@ interface ProductVariant {
   price: number;
   stock: number;
   is_available: boolean;
+}
+
+interface ProductCondition {
+  name: string;
+  price_adjustment: number;
+}
+
+interface QRISCode {
+  id: string;
+  name: string;
+  image_url: string;
+  is_active: boolean;
 }
 
 export default function DashboardMenuPage() {
@@ -69,12 +83,19 @@ export default function DashboardMenuPage() {
     { name: "", price: 0, stock: 100, is_available: true }
   ]);
 
+  const [conditions, setConditions] = useState<ProductCondition[]>([
+    { name: "", price_adjustment: 0 }
+  ]);
+
+  const [qrisCodes, setQrisCodes] = useState<QRISCode[]>([]);
+  const [selectedQRISId, setSelectedQRISId] = useState<string>("");
+
   // Fetch products
   const fetchProducts = (showLoading = true) => {
     if (showLoading) {
       setLoading(true);
     }
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products`)
+    fetch(`/api/admin/products`)
       .then(res => res.json())
       .then(data => {
         console.log('Fetched products:', data);
@@ -95,7 +116,20 @@ export default function DashboardMenuPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchQRISCodes();
   }, []);
+
+  const fetchQRISCodes = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/qris`);
+      const data = await response.json();
+      if (data.success) {
+        setQrisCodes(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching QRIS codes:', error);
+    }
+  };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ show: true, message, type });
@@ -136,6 +170,22 @@ export default function DashboardMenuPage() {
   const removeVariantField = (index: number) => {
     if (variants.length > 1) {
       setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleConditionChange = (index: number, field: keyof ProductCondition, value: string | number) => {
+    const newConditions = [...conditions];
+    newConditions[index] = { ...newConditions[index], [field]: value };
+    setConditions(newConditions);
+  };
+
+  const addConditionField = () => {
+    setConditions([...conditions, { name: "", price_adjustment: 0 }]);
+  };
+
+  const removeConditionField = (index: number) => {
+    if (conditions.length > 1) {
+      setConditions(conditions.filter((_, i) => i !== index));
     }
   };
 
@@ -208,6 +258,10 @@ export default function DashboardMenuPage() {
       { name: "", price: 0, stock: 100, is_available: true },
       { name: "", price: 0, stock: 100, is_available: true }
     ]);
+    setConditions([
+      { name: "", price_adjustment: 0 }
+    ]);
+    setSelectedQRISId("");
     setShowModal(true);
   };
 
@@ -238,6 +292,28 @@ export default function DashboardMenuPage() {
         { name: "", price: 0, stock: 100, is_available: true }
       ]);
     }
+    // Load existing conditions or create empty one
+    if (product.conditions) {
+      try {
+        // Parse conditions if it's a JSON string
+        const parsedConditions = typeof product.conditions === 'string' 
+          ? JSON.parse(product.conditions)
+          : product.conditions;
+        
+        if (Array.isArray(parsedConditions) && parsedConditions.length > 0) {
+          setConditions(parsedConditions);
+        } else {
+          setConditions([{ name: "", price_adjustment: 0 }]);
+        }
+      } catch (e) {
+        console.error('Error parsing conditions:', e);
+        setConditions([{ name: "", price_adjustment: 0 }]);
+      }
+    } else {
+      setConditions([{ name: "", price_adjustment: 0 }]);
+    }
+    // Load QRIS selection
+    setSelectedQRISId(product.qris_id || "");
     setShowModal(true);
   };
 
@@ -253,19 +329,31 @@ export default function DashboardMenuPage() {
     // Filter out empty variants (only require name, price can be 0 to inherit from product)
     const validVariants = variants.filter(v => v.name && v.name.trim() !== '');
     
+    // Filter out empty conditions
+    const validConditions = conditions.filter(c => c.name && c.name.trim() !== '');
+    
     console.log('Submitting product data:', formData);
     console.log('Submitting variants:', validVariants);
+    console.log('Submitting conditions:', validConditions);
     
     const url = modalMode === "add" 
-      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products`
-      : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${selectedProduct?.id}`;
+      ? `/api/admin/products`
+      : `/api/admin/products/${selectedProduct?.id}`;
     
     const method = modalMode === "add" ? 'POST' : 'PUT';
 
-    const payload = {
+    const payload: any = {
       ...formData,
-      variants: validVariants // Always send variants array (can be empty)
+      variants: validVariants,
+      conditions: validConditions
     };
+    
+    // Only add qris_id if it has a valid value, otherwise explicitly set to null
+    if (selectedQRISId && selectedQRISId.trim() !== '') {
+      payload.qris_id = selectedQRISId;
+    } else {
+      payload.qris_id = null;
+    }
 
     try {
       const response = await fetch(url, {
@@ -299,7 +387,7 @@ export default function DashboardMenuPage() {
     if (!productToDelete) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${productToDelete.id}`, {
+      const response = await fetch(`/api/admin/products/${productToDelete.id}`, {
         method: 'DELETE'
       });
 
@@ -328,7 +416,7 @@ export default function DashboardMenuPage() {
     try {
       console.log('Toggling product:', product.id, 'Current availability:', product.is_available);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/products/${product.id}/toggle`, {
+      const response = await fetch(`/api/admin/products/${product.id}/toggle`, {
         method: 'PATCH'
       });
 
@@ -801,6 +889,142 @@ export default function DashboardMenuPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* Conditions Section */}
+                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#f0f9ff', border: '2px solid #1a1a1a' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <label style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                      Kondisi Produk (Opsional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addConditionField}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#0ea5e9',
+                        color: 'white',
+                        border: '2px solid #1a1a1a',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Tambah Kondisi
+                    </button>
+                  </div>
+                  <small style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '16px' }}>
+                    Contoh: Pedas, Tidak Pedas, Extra Keju, Tanpa Bawang, dll. Customer akan memilih kondisi sebelum checkout. Penyesuaian harga bersifat opsional.
+                  </small>
+
+                  {conditions.map((condition, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: '16px', 
+                      padding: '16px', 
+                      background: 'white', 
+                      border: '2px solid #1a1a1a',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <strong style={{ fontSize: '14px' }}>Kondisi {index + 1}</strong>
+                        {conditions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeConditionField(index)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#ff3b30',
+                              color: 'white',
+                              border: '2px solid #1a1a1a',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 700
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Nama Kondisi</label>
+                          <input
+                            type="text"
+                            value={condition.name}
+                            onChange={(e) => handleConditionChange(index, 'name', e.target.value)}
+                            placeholder="Contoh: Pedas, Extra Keju"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>
+                            Penyesuaian Harga (Opsional)
+                            <span style={{ 
+                              marginLeft: '6px',
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              background: '#e0e0e0',
+                              borderRadius: '4px',
+                              fontWeight: 500,
+                              color: '#666'
+                            }}>
+                              Opsional
+                            </span>
+                          </label>
+                          <input
+                            type="number"
+                            value={condition.price_adjustment}
+                            onChange={(e) => handleConditionChange(index, 'price_adjustment', Number(e.target.value))}
+                            placeholder="0 (Gratis)"
+                            min="0"
+                          />
+                          <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                            Kosongkan atau isi 0 jika gratis. Isi angka untuk tambahan biaya (contoh: 5000 untuk +Rp 5.000)
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* QRIS Selection */}
+                <div className="form-group" style={{ marginTop: '20px', padding: '20px', background: '#fff5f2', border: '2px solid #ff6b35' }}>
+                  <label style={{ margin: 0, fontSize: '16px', fontWeight: 700, marginBottom: '12px', display: 'block' }}>
+                    Pilih QRIS untuk Produk Ini
+                  </label>
+                  <small style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '12px' }}>
+                    QRIS yang dipilih akan ditampilkan saat customer checkout produk ini
+                  </small>
+                  <select
+                    value={selectedQRISId}
+                    onChange={(e) => setSelectedQRISId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #1a1a1a',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      background: 'white'
+                    }}
+                  >
+                    <option value="">Tidak ada QRIS (gunakan default)</option>
+                    {qrisCodes.map((qris) => (
+                      <option key={qris.id} value={qris.id}>
+                        {qris.name}
+                      </option>
+                    ))}
+                  </select>
+                  {qrisCodes.length === 0 && (
+                    <small style={{ color: '#ff6b35', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                      ⚠️ Belum ada QRIS. <a href="/dashboard/qris" style={{ color: '#ff6b35', textDecoration: 'underline' }}>Tambah QRIS</a>
+                    </small>
+                  )}
                 </div>
 
                 <div className="form-group">

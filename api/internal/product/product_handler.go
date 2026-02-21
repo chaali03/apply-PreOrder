@@ -99,11 +99,12 @@ func CreateProductHandler(c *fiber.Ctx) error {
 	
 	// create entity dari dto
 	product := Product{
-		Name:     req.Name,
-		Desc:     req.Desc,
-		Quantity: req.Quantity,
-		Price:    req.Price,
-		ImageURL: req.ImageURL,
+		Name:       req.Name,
+		Desc:       req.Desc,
+		Quantity:   req.Quantity,
+		Price:      req.Price,
+		ImageURL:   req.ImageURL,
+		Conditions: req.Conditions,
 	}
 	
 	// Save ke db
@@ -187,6 +188,9 @@ func UpdateProductHandler(c *fiber.Ctx) error {
 	}
 	if req.ImageURL != nil {
 		product.ImageURL = *req.ImageURL
+	}
+	if req.Conditions != nil {
+		product.Conditions = *req.Conditions
 	}
 	
 	// siumpen changes

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
+    const backendUrl = 'https://api.scafffood.my.id';
     const targetUrl = `${backendUrl}/api/admin/products`;
     
     console.log(`[Proxy] GET ${targetUrl}`);
@@ -13,38 +13,41 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
-    
+
     const data = await response.json();
-    
-    return NextResponse.json(data, { 
-      status: response.status,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      }
-    });
-    
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('[Proxy Error]', error);
+    console.error('[Proxy] Error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to connect to backend',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { success: false, message: 'Failed to fetch products' },
       { status: 500 }
     );
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function POST(request: NextRequest) {
+  try {
+    const backendUrl = 'https://api.scafffood.my.id';
+    const targetUrl = `${backendUrl}/api/admin/products`;
+    
+    const body = await request.json();
+    console.log(`[Proxy] POST ${targetUrl}`);
+    
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('[Proxy] Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to create product' },
+      { status: 500 }
+    );
+  }
 }

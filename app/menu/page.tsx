@@ -17,6 +17,11 @@ interface ProductVariant {
   is_available: boolean;
 }
 
+interface ProductCondition {
+  name: string;
+  price_adjustment: number;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -31,6 +36,7 @@ interface Product {
   tag_color: string;
   is_available: boolean;
   variants?: ProductVariant[];
+  conditions?: ProductCondition[];
 }
 
 export default function MenuPage() {

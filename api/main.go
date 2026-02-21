@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -49,6 +50,8 @@ type Product struct {
 	Stock            int              `gorm:"default:0" json:"stock"`
 	IsAvailable      bool             `gorm:"default:true" json:"is_available"`
 	MinOrder         int              `gorm:"default:1" json:"min_order"`
+	Conditions       string           `gorm:"type:jsonb;default:'[]'" json:"conditions,omitempty"`
+	QRISId           *string          `gorm:"type:uuid" json:"qris_id,omitempty"`
 	Variants         []ProductVariant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`
@@ -66,6 +69,16 @@ type ProductVariant struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// QRISCode model
+type QRISCode struct {
+	ID        string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Name      string    `gorm:"not null" json:"name"`
+	ImageURL  string    `gorm:"type:text;not null" json:"image_url"`
+	IsActive  bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Order model
 type Order struct {
 	ID                   string     `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
@@ -74,6 +87,7 @@ type Order struct {
 	CustomerEmail        string     `gorm:"not null" json:"customer_email"`
 	CustomerPhone        string     `gorm:"not null" json:"customer_phone"`
 	DeliveryAddress      string     `json:"delivery_address"`
+	DeliveryLocation     string     `gorm:"default:'TB'" json:"delivery_location"`
 	Subtotal             float64    `json:"subtotal"`
 	DeliveryFee          float64    `json:"delivery_fee"`
 	Total                float64    `json:"total"`
@@ -781,7 +795,8 @@ func main() {
 
 		var requestData struct {
 			Product
-			Variants []ProductVariant `json:"variants"`
+			Variants   []ProductVariant        `json:"variants"`
+			Conditions []map[string]interface{} `json:"conditions"`
 		}
 		
 		if err := c.BodyParser(&requestData); err != nil {
@@ -789,6 +804,16 @@ func main() {
 				"success": false,
 				"message": "Invalid request body",
 			})
+		}
+
+		// Convert conditions array to JSON string
+		if len(requestData.Conditions) > 0 {
+			conditionsJSON, err := json.Marshal(requestData.Conditions)
+			if err == nil {
+				requestData.Product.Conditions = string(conditionsJSON)
+			}
+		} else {
+			requestData.Product.Conditions = "[]"
 		}
 
 		// Set default values
@@ -861,13 +886,24 @@ func main() {
 		// Parse update data including variants
 		var requestData struct {
 			Product
-			Variants []ProductVariant `json:"variants"`
+			Variants   []ProductVariant        `json:"variants"`
+			Conditions []map[string]interface{} `json:"conditions"`
 		}
 		if err := c.BodyParser(&requestData); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
 				"message": "Invalid request body",
 			})
+		}
+
+		// Convert conditions array to JSON string
+		if len(requestData.Conditions) > 0 {
+			conditionsJSON, err := json.Marshal(requestData.Conditions)
+			if err == nil {
+				requestData.Product.Conditions = string(conditionsJSON)
+			}
+		} else {
+			requestData.Product.Conditions = "[]"
 		}
 
 		// Update product fields
@@ -1015,6 +1051,203 @@ func main() {
 			"success": true,
 			"data":    product,
 			"message": "Product availability updated",
+		})
+	})
+
+	// ==================== QRIS MANAGEMENT ====================
+	
+	// Get all QRIS codes
+	app.Get("/api/admin/qris", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var qrisCodes []QRISCode
+		result := DB.Order("created_at DESC").Find(&qrisCodes)
+		if result.Error != nil {
+			log.Printf("Error fetching QRIS codes: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to fetch QRIS codes",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    qrisCodes,
+		})
+	})
+
+	// Create QRIS code
+	app.Post("/api/admin/qris", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var qris QRISCode
+		if err := c.BodyParser(&qris); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		if qris.Name == "" || qris.ImageURL == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Name and image URL are required",
+			})
+		}
+
+		qris.IsActive = true
+		result := DB.Create(&qris)
+		if result.Error != nil {
+			log.Printf("Error creating QRIS: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to create QRIS",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    qris,
+			"message": "QRIS created successfully",
+		})
+	})
+
+	// Update QRIS code
+	app.Put("/api/admin/qris/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		var qris QRISCode
+
+		if err := DB.First(&qris, "id = ?", id).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "QRIS not found",
+			})
+		}
+
+		var updateData QRISCode
+		if err := c.BodyParser(&updateData); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid request body",
+			})
+		}
+
+		result := DB.Model(&qris).Updates(updateData)
+		if result.Error != nil {
+			log.Printf("Error updating QRIS: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to update QRIS",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    qris,
+			"message": "QRIS updated successfully",
+		})
+	})
+
+	// Delete QRIS code
+	app.Delete("/api/admin/qris/:id", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		id := c.Params("id")
+		
+		// Check if any products are using this QRIS
+		var count int64
+		DB.Model(&Product{}).Where("qris_id = ?", id).Count(&count)
+		if count > 0 {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": fmt.Sprintf("Cannot delete QRIS. %d product(s) are still using it", count),
+			})
+		}
+
+		result := DB.Delete(&QRISCode{}, "id = ?", id)
+		if result.Error != nil {
+			log.Printf("Error deleting QRIS: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to delete QRIS",
+			})
+		}
+
+		if result.RowsAffected == 0 {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "QRIS not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "QRIS deleted successfully",
+		})
+	})
+
+	// Get QRIS by product ID
+	app.Get("/api/products/:id/qris", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		productId := c.Params("id")
+		var product Product
+
+		if err := DB.First(&product, "id = ?", productId).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "Product not found",
+			})
+		}
+
+		// If product has no QRIS assigned, return null
+		if product.QRISId == nil {
+			return c.JSON(fiber.Map{
+				"success": true,
+				"data":    nil,
+				"message": "No QRIS assigned to this product",
+			})
+		}
+
+		// Get QRIS details
+		var qris QRISCode
+		if err := DB.First(&qris, "id = ?", *product.QRISId).Error; err != nil {
+			return c.Status(404).JSON(fiber.Map{
+				"success": false,
+				"message": "QRIS not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    qris,
 		})
 	})
 

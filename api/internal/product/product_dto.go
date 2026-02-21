@@ -6,45 +6,49 @@ import (
 
 // Create Product Request
 type CreateProductRequest struct {
-	Name     string  `json:"name" validate:"required,min=3,max=255"`
-	Desc     string  `json:"desc" validate:"omitempty,max=1000"`
-	Quantity int     `json:"quantity" validate:"min=0"`
-	Price    float64 `json:"price" validate:"min=0"`
-	ImageURL string  `json:"image_url,omitempty"`
+	Name       string  `json:"name" validate:"required,min=3,max=255"`
+	Desc       string  `json:"desc" validate:"omitempty,max=1000"`
+	Quantity   int     `json:"quantity" validate:"min=0"`
+	Price      float64 `json:"price" validate:"min=0"`
+	ImageURL   string  `json:"image_url,omitempty"`
+	Conditions string  `json:"conditions,omitempty"`
 }
 
 // Update Product Request
 type UpdateProductRequest struct {
-	Name     *string  `json:"name" validate:"omitempty,min=3,max=255"`
-	Desc     *string  `json:"desc" validate:"omitempty,max=1000"`
-	Quantity *int     `json:"quantity" validate:"omitempty,min=0"`
-	Price    *float64 `json:"price" validate:"omitempty,min=0"`
-	ImageURL *string  `json:"image_url,omitempty"`
+	Name       *string  `json:"name" validate:"omitempty,min=3,max=255"`
+	Desc       *string  `json:"desc" validate:"omitempty,max=1000"`
+	Quantity   *int     `json:"quantity" validate:"omitempty,min=0"`
+	Price      *float64 `json:"price" validate:"omitempty,min=0"`
+	ImageURL   *string  `json:"image_url,omitempty"`
+	Conditions *string  `json:"conditions,omitempty"`
 }
 
 // Product Response
 type ProductResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Desc      string    `json:"desc,omitempty"`
-	Quantity  int       `json:"quantity"`
-	Price     float64   `json:"price"`
-	ImageURL  string    `json:"image_url,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Desc       string    `json:"desc,omitempty"`
+	Quantity   int       `json:"quantity"`
+	Price      float64   `json:"price"`
+	ImageURL   string    `json:"image_url,omitempty"`
+	Conditions string    `json:"conditions,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // Converter functions
 func ToResponse(entity Product) ProductResponse {
 	return ProductResponse{
-		ID:        entity.ID,
-		Name:      entity.Name,
-		Desc:      entity.Desc,
-		Quantity:  entity.Quantity,
-		Price:     entity.Price,
-		ImageURL:  entity.ImageURL,
-		CreatedAt: entity.CreatedAt,
-		UpdatedAt: entity.UpdatedAt,
+		ID:         entity.ID,
+		Name:       entity.Name,
+		Desc:       entity.Desc,
+		Quantity:   entity.Quantity,
+		Price:      entity.Price,
+		ImageURL:   entity.ImageURL,
+		Conditions: entity.Conditions,
+		CreatedAt:  entity.CreatedAt,
+		UpdatedAt:  entity.UpdatedAt,
 	}
 }
 

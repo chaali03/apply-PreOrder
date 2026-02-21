@@ -14,17 +14,38 @@ interface CartItem {
   category?: string;
   min_order?: number;
   variant?: string | null;
+  conditions?: ProductCondition[];
+}
+
+interface ProductCondition {
+  name: string;
+  price_adjustment: number;
 }
 
 export default function OrderPage() {
   const [step, setStep] = useState<"cart" | "checkout" | "payment" | "success">("cart");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<{[key: string]: string}>({});
   
   // Load order data from localStorage
   useEffect(() => {
     const orderDataStr = localStorage.getItem('orderData');
     if (orderDataStr) {
       const orderData = JSON.parse(orderDataStr);
+      
+      // Parse conditions if it's a JSON string
+      let parsedConditions = [];
+      try {
+        if (orderData.product.conditions) {
+          parsedConditions = typeof orderData.product.conditions === 'string'
+            ? JSON.parse(orderData.product.conditions)
+            : orderData.product.conditions;
+        }
+      } catch (e) {
+        console.error('Error parsing conditions:', e);
+        parsedConditions = [];
+      }
+      
       setCartItems([{
         id: orderData.product.id,
         name: orderData.product.name,
@@ -33,7 +54,8 @@ export default function OrderPage() {
         image: orderData.product.image,
         category: orderData.product.category,
         min_order: orderData.product.min_order || 1,
-        variant: orderData.product.variant || null
+        variant: orderData.product.variant || null,
+        conditions: Array.isArray(parsedConditions) ? parsedConditions : []
       }]);
     }
 
@@ -41,13 +63,15 @@ export default function OrderPage() {
     const savedPhone = localStorage.getItem('customerPhone');
     const savedName = localStorage.getItem('customerName');
     const savedAddress = localStorage.getItem('customerAddress');
+    const savedDeliveryLocation = localStorage.getItem('customerDeliveryLocation') as "TB" | "Luar TB" | null;
     
-    if (savedPhone || savedName || savedAddress) {
+    if (savedPhone || savedName || savedAddress || savedDeliveryLocation) {
       setCustomerInfo({
         name: savedName || "",
         phone: savedPhone || "",
         address: savedAddress || "",
-        notes: ""
+        notes: "",
+        deliveryLocation: savedDeliveryLocation || "TB"
       });
     }
   }, []);
@@ -56,7 +80,8 @@ export default function OrderPage() {
     name: "",
     phone: "",
     address: "",
-    notes: ""
+    notes: "",
+    deliveryLocation: "TB" as "TB" | "Luar TB"
   });
 
   const [paymentMethod, setPaymentMethod] = useState<"qris">("qris");
@@ -72,47 +97,77 @@ export default function OrderPage() {
   const [showPaymentDetails, setShowPaymentDetails] = useState(true);
 
   // Calculate totals
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    let itemTotal = item.price * item.quantity;
+    
+    // Add condition price adjustment if selected
+    if (selectedConditions[item.id] && item.conditions) {
+      const selectedCondition = item.conditions.find(c => c.name === selectedConditions[item.id]);
+      if (selectedCondition) {
+        itemTotal += selectedCondition.price_adjustment * item.quantity;
+      }
+    }
+    
+    return sum + itemTotal;
+  }, 0);
   const deliveryFee = 0;
   const total = subtotal;
 
   // Generate QR Code
   useEffect(() => {
-    if (step === "payment") {
+    if (step === "payment" && cartItems.length > 0) {
       fetchQRISImage();
     }
-  }, [step]);
+  }, [step, cartItems]);
 
   const fetchQRISImage = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/settings?key=qris_image`);
+      // Get product ID from cart
+      if (cartItems.length === 0) return;
+      
+      const productId = cartItems[0].id;
+      
+      // Fetch QRIS for this product
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/products/${productId}/qris`);
       const data = await response.json();
       
       console.log('QRIS API response:', data);
       
-      if (data.success && data.data.value) {
-        const value = data.data.value as string;
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
-        console.log('QRIS URL:', absoluteUrl);
-        setQrCodeUrl(absoluteUrl);
+      if (data.success && data.data) {
+        // Product has specific QRIS
+        const qrisUrl = data.data.image_url;
+        console.log('Product QRIS URL:', qrisUrl);
+        setQrCodeUrl(qrisUrl);
       } else {
-        console.log('No QRIS in database, generating fallback QR');
-        // Fallback: generate QR if no image in database
-        const qrisData = `00020101021226670016ID.CO.QRIS.WWW0118ID${Date.now()}0215ID10SCAFFFOOD0303UMI51440014ID.CO.QRIS.WWW02180000000000000000000303UMI5204599953033605802ID5913SCAFF*FOOD6007JAKARTA61051234062070703A0163044B3D`;
+        // No specific QRIS, try to get default from settings
+        console.log('No product QRIS, trying default...');
+        const settingsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/settings?key=qris_image`);
+        const settingsData = await settingsResponse.json();
         
-        QRCode.toDataURL(qrisData, {
-          width: 300,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        }).then(url => {
-          setQrCodeUrl(url);
-        }).catch(err => {
-          console.error('Error generating QR code:', err);
-        });
+        if (settingsData.success && settingsData.data.value) {
+          const value = settingsData.data.value as string;
+          const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+          const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}${value}`;
+          console.log('Default QRIS URL:', absoluteUrl);
+          setQrCodeUrl(absoluteUrl);
+        } else {
+          // Generate fallback QR if no QRIS at all
+          console.log('No QRIS in database, generating fallback QR');
+          const qrisData = `00020101021226670016ID.CO.QRIS.WWW0118ID${Date.now()}0215ID10SCAFFFOOD0303UMI51440014ID.CO.QRIS.WWW02180000000000000000000303UMI5204599953033605802ID5913SCAFF*FOOD6007JAKARTA61051234062070703A0163044B3D`;
+          
+          QRCode.toDataURL(qrisData, {
+            width: 300,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          }).then(url => {
+            setQrCodeUrl(url);
+          }).catch(err => {
+            console.error('Error generating QR code:', err);
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching QRIS:', error);
@@ -211,6 +266,16 @@ export default function OrderPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
+  
+  // Address validation state
+  const [addressValidation, setAddressValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    confidence: number;
+    detectedArea?: string;
+    suggestions?: string[];
+  } | null>(null);
+  const [validatingAddress, setValidatingAddress] = useState(false);
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
@@ -252,8 +317,55 @@ export default function OrderPage() {
     }
   };
 
+  // Validate address with AI
+  const validateAddress = async (address: string) => {
+    if (!address || address.trim().length < 5) {
+      setAddressValidation(null);
+      return;
+    }
+
+    setValidatingAddress(true);
+    
+    try {
+      const response = await fetch('/api/validate-address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setAddressValidation(data.data);
+      }
+    } catch (error) {
+      console.error('Error validating address:', error);
+    } finally {
+      setValidatingAddress(false);
+    }
+  };
+
+  // Debounce address validation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerInfo.address && customerInfo.address.trim().length >= 5) {
+        validateAddress(customerInfo.address);
+      }
+    }, 800); // Wait 800ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [customerInfo.address]);
+
   const handleCheckout = () => {
     if (customerInfo.name && customerInfo.phone && customerInfo.address) {
+      // Check address validation
+      if (!addressValidation || !addressValidation.isValid) {
+        setNotificationMessage("Alamat pengiriman tidak valid atau di luar area layanan");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        return;
+      }
+      
       setStep("payment");
     } else {
       setNotificationMessage("Mohon lengkapi semua data pengiriman");
@@ -314,6 +426,7 @@ export default function OrderPage() {
           customer_email: `${customerInfo.phone}@phone.local`,
           customer_phone: customerInfo.phone,
           delivery_address: customerInfo.address,
+          delivery_location: customerInfo.deliveryLocation,
           subtotal: subtotal,
           delivery_fee: 0,
           total: total,
@@ -322,14 +435,28 @@ export default function OrderPage() {
           payment_proof: paymentProofUrl,
           order_status: "processing"
         },
-        items: cartItems.map(item => ({
-          product_id: item.id,
-          product_name: item.variant ? `${item.name} (${item.variant})` : item.name,
-          product_price: item.price,
-          product_image: item.image,
-          quantity: item.quantity,
-          subtotal: item.price * item.quantity
-        }))
+        items: cartItems.map(item => {
+          let itemPrice = item.price;
+          let productName = item.variant ? `${item.name} (${item.variant})` : item.name;
+          
+          // Add condition to product name and adjust price
+          if (selectedConditions[item.id] && item.conditions) {
+            const selectedCondition = item.conditions.find(c => c.name === selectedConditions[item.id]);
+            if (selectedCondition) {
+              productName += ` - ${selectedCondition.name}`;
+              itemPrice += selectedCondition.price_adjustment;
+            }
+          }
+          
+          return {
+            product_id: item.id,
+            product_name: productName,
+            product_price: itemPrice,
+            product_image: item.image,
+            quantity: item.quantity,
+            subtotal: itemPrice * item.quantity
+          };
+        })
       };
 
       console.log('📦 Submitting order:', orderData);
@@ -350,6 +477,7 @@ export default function OrderPage() {
         localStorage.setItem('customerPhone', customerInfo.phone);
         localStorage.setItem('customerName', customerInfo.name);
         localStorage.setItem('customerAddress', customerInfo.address);
+        localStorage.setItem('customerDeliveryLocation', customerInfo.deliveryLocation);
         
         // Clear cart
         localStorage.removeItem('orderData');
@@ -530,6 +658,229 @@ export default function OrderPage() {
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                   />
+                  <p className="form-hint">
+                    Contoh: Jl. Raya Cimangis No. 123, RT 01/RW 05, Cimangis, Depok
+                  </p>
+                  
+                  {/* AI Address Validation Result */}
+                  {validatingAddress && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '12px 16px',
+                      background: '#f3f4f6',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        border: '3px solid #3b82f6',
+                        borderTopColor: 'transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite'
+                      }} />
+                      <div>
+                        <p style={{ 
+                          margin: 0, 
+                          fontSize: '14px', 
+                          fontWeight: 600,
+                          color: '#374151'
+                        }}>
+                          🤖 AI sedang memvalidasi alamat...
+                        </p>
+                        <p style={{ 
+                          margin: '4px 0 0 0', 
+                          fontSize: '12px',
+                          color: '#6b7280'
+                        }}>
+                          Memeriksa area pengiriman
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!validatingAddress && addressValidation && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '16px',
+                      background: addressValidation.isValid ? '#f0fdf4' : '#fef2f2',
+                      border: `2px solid ${addressValidation.isValid ? '#10b981' : '#ef4444'}`,
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          background: addressValidation.isValid ? '#10b981' : '#ef4444',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {addressValidation.isValid ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          )}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ 
+                            margin: 0, 
+                            fontSize: '14px', 
+                            fontWeight: 700,
+                            color: addressValidation.isValid ? '#065f46' : '#991b1b'
+                          }}>
+                            {addressValidation.message}
+                          </p>
+                          {addressValidation.detectedArea && (
+                            <p style={{ 
+                              margin: '6px 0 0 0', 
+                              fontSize: '12px',
+                              color: addressValidation.isValid ? '#047857' : '#dc2626',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                              </svg>
+                              Area terdeteksi: {addressValidation.detectedArea}
+                            </p>
+                          )}
+                          <p style={{ 
+                            margin: '6px 0 0 0', 
+                            fontSize: '11px',
+                            color: '#6b7280',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            🤖 AI Confidence: {addressValidation.confidence}%
+                          </p>
+                          {addressValidation.suggestions && addressValidation.suggestions.length > 0 && (
+                            <div style={{ 
+                              marginTop: '12px',
+                              paddingTop: '12px',
+                              borderTop: `1px solid ${addressValidation.isValid ? '#86efac' : '#fca5a5'}`
+                            }}>
+                              <p style={{ 
+                                margin: '0 0 8px 0', 
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#374151'
+                              }}>
+                                💡 Saran:
+                              </p>
+                              <ul style={{ 
+                                margin: 0, 
+                                paddingLeft: '20px',
+                                fontSize: '12px',
+                                color: '#6b7280'
+                              }}>
+                                {addressValidation.suggestions.map((suggestion, idx) => (
+                                  <li key={idx} style={{ marginBottom: '4px' }}>
+                                    {suggestion}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Delivery Location Selection */}
+                <div className="form-group" style={{ 
+                  marginTop: '20px', 
+                  padding: '20px', 
+                  background: '#f0fdf4', 
+                  border: '2px solid #10b981',
+                  borderRadius: '8px'
+                }}>
+                  <label className="form-label" style={{ marginBottom: '12px', display: 'block' }}>
+                    Lokasi Pengiriman
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: "TB"})}
+                      style={{
+                        flex: '1',
+                        minWidth: '150px',
+                        padding: '16px',
+                        border: customerInfo.deliveryLocation === "TB" ? '3px solid #10b981' : '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        background: customerInfo.deliveryLocation === "TB" ? '#f0fdf4' : 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={customerInfo.deliveryLocation === "TB" ? "#10b981" : "#6b7280"} strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                      </svg>
+                      <div style={{ 
+                        fontWeight: customerInfo.deliveryLocation === "TB" ? 700 : 500,
+                        color: customerInfo.deliveryLocation === "TB" ? "#10b981" : "#374151",
+                        fontSize: '16px'
+                      }}>
+                        Dalam TB
+                      </div>
+                      <small style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center' }}>
+                        Pengiriman di dalam area TB
+                      </small>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: "Luar TB"})}
+                      style={{
+                        flex: '1',
+                        minWidth: '150px',
+                        padding: '16px',
+                        border: customerInfo.deliveryLocation === "Luar TB" ? '3px solid #10b981' : '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        background: customerInfo.deliveryLocation === "Luar TB" ? '#f0fdf4' : 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={customerInfo.deliveryLocation === "Luar TB" ? "#10b981" : "#6b7280"} strokeWidth="2">
+                        <circle cx="12" cy="10" r="3"></circle>
+                        <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
+                      </svg>
+                      <div style={{ 
+                        fontWeight: customerInfo.deliveryLocation === "Luar TB" ? 700 : 500,
+                        color: customerInfo.deliveryLocation === "Luar TB" ? "#10b981" : "#374151",
+                        fontSize: '16px'
+                      }}>
+                        Luar TB
+                      </div>
+                      <small style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center' }}>
+                        Pengiriman di luar area TB
+                      </small>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -543,14 +894,112 @@ export default function OrderPage() {
                   />
                 </div>
 
+                {/* Conditions Selection */}
+                {cartItems.some(item => item.conditions && item.conditions.length > 0) && (
+                  <div className="form-group" style={{ 
+                    marginTop: '24px', 
+                    padding: '20px', 
+                    background: '#f0f9ff', 
+                    border: '2px solid #0ea5e9',
+                    borderRadius: '8px'
+                  }}>
+                    <h3 style={{ 
+                      fontSize: '16px', 
+                      fontWeight: 700, 
+                      marginBottom: '16px',
+                      color: '#1a1a1a'
+                    }}>
+                      Pilih Kondisi Produk
+                    </h3>
+                    {cartItems.map(item => {
+                      if (!item.conditions || item.conditions.length === 0) return null;
+                      
+                      return (
+                        <div key={item.id} style={{ marginBottom: '20px' }}>
+                          <label style={{ 
+                            display: 'block', 
+                            fontSize: '14px', 
+                            fontWeight: 600, 
+                            marginBottom: '8px',
+                            color: '#374151'
+                          }}>
+                            {item.name}
+                          </label>
+                          <select
+                            className="form-input"
+                            value={selectedConditions[item.id] || ''}
+                            onChange={(e) => setSelectedConditions({
+                              ...selectedConditions,
+                              [item.id]: e.target.value
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              border: '2px solid #1a1a1a',
+                              borderRadius: '4px',
+                              fontSize: '14px',
+                              background: 'white'
+                            }}
+                          >
+                            <option value="">Pilih kondisi...</option>
+                            {item.conditions.map((condition, idx) => (
+                              <option key={idx} value={condition.name}>
+                                {condition.name}
+                                {condition.price_adjustment > 0 
+                                  ? ` (+Rp ${condition.price_adjustment.toLocaleString()})` 
+                                  : ' (Gratis)'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                    <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                      * Pilih kondisi untuk setiap produk yang memiliki opsi kondisi
+                    </small>
+                  </div>
+                )}
+
                 <div className="order-summary">
                   <h3 className="summary-title">Ringkasan Pesanan</h3>
-                  {cartItems.map(item => (
-                    <div key={item.id} className="summary-row">
-                      <span>{item.name} x{item.quantity}</span>
-                      <span>Rp {(item.price * item.quantity).toLocaleString()}</span>
-                    </div>
-                  ))}
+                  {cartItems.map(item => {
+                    let itemPrice = item.price * item.quantity;
+                    let conditionText = '';
+                    let conditionBadge = null;
+                    
+                    // Add condition info if selected
+                    if (selectedConditions[item.id] && item.conditions) {
+                      const selectedCondition = item.conditions.find(c => c.name === selectedConditions[item.id]);
+                      if (selectedCondition) {
+                        itemPrice += selectedCondition.price_adjustment * item.quantity;
+                        const isFree = selectedCondition.price_adjustment === 0;
+                        conditionText = ` (${selectedCondition.name})`;
+                        conditionBadge = (
+                          <span style={{
+                            fontSize: '11px',
+                            padding: '2px 6px',
+                            background: isFree ? '#e0f2fe' : '#fef3c7',
+                            color: isFree ? '#0369a1' : '#92400e',
+                            borderRadius: '4px',
+                            marginLeft: '6px',
+                            fontWeight: 600
+                          }}>
+                            {isFree ? '✓ Gratis' : `+Rp ${selectedCondition.price_adjustment.toLocaleString()}`}
+                          </span>
+                        );
+                      }
+                    }
+                    
+                    return (
+                      <div key={item.id} className="summary-row">
+                        <span>
+                          {item.name} x{item.quantity}{conditionText}
+                          {conditionBadge}
+                        </span>
+                        <span>Rp {itemPrice.toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
                   <div className="summary-row summary-total">
                     <span>Total</span>
                     <span>Rp {total.toLocaleString()}</span>
@@ -564,7 +1013,11 @@ export default function OrderPage() {
                   <button 
                     onClick={handleCheckout} 
                     className="btn-primary"
-                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address}
+                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid}
+                    style={{
+                      opacity: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid) ? 0.5 : 1,
+                      cursor: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid) ? 'not-allowed' : 'pointer'
+                    }}
                   >
                     Lanjut Bayar
                   </button>

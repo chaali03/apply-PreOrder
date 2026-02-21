@@ -994,3 +994,13 @@
   width: 48px; /* Same as back button width for centering */
 }
 
+
+/* Spinner animation for address validation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

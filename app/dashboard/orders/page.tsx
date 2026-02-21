@@ -21,6 +21,7 @@ interface Order {
   customer_email: string;
   customer_phone: string;
   delivery_address: string;
+  delivery_location?: string;
   subtotal: number;
   delivery_fee: number;
   total: number;
@@ -567,7 +568,23 @@ export default function DashboardOrdersPage() {
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                         <circle cx="12" cy="10" r="3"></circle>
                       </svg>
-                      <span>{order.delivery_address}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span>{order.delivery_address}</span>
+                        {order.delivery_location && (
+                          <span style={{ 
+                            fontSize: '12px', 
+                            padding: '2px 8px',
+                            background: order.delivery_location === 'TB' ? '#dbeafe' : '#fef3c7',
+                            color: order.delivery_location === 'TB' ? '#1e40af' : '#92400e',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-block',
+                            width: 'fit-content'
+                          }}>
+                            📍 {order.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -862,7 +879,22 @@ export default function DashboardOrdersPage() {
                   </svg>
                   <div>
                     <span className="info-label">Alamat Pengiriman</span>
-                    <span className="info-value">{orderToComplete.delivery_address}</span>
+                    <span className="info-value">
+                      {orderToComplete.delivery_address}
+                      {orderToComplete.delivery_location && (
+                        <span style={{ 
+                          marginLeft: '8px',
+                          fontSize: '11px', 
+                          padding: '2px 6px',
+                          background: orderToComplete.delivery_location === 'TB' ? '#dbeafe' : '#fef3c7',
+                          color: orderToComplete.delivery_location === 'TB' ? '#1e40af' : '#92400e',
+                          borderRadius: '4px',
+                          fontWeight: 600
+                        }}>
+                          📍 {orderToComplete.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -56,6 +56,12 @@ export default function LaporanPage() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
+  // Filter and sort states
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"revenue" | "quantity" | "orders">("revenue");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [availableProducts, setAvailableProducts] = useState<string[]>([]);
+  
   const chartRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +81,10 @@ export default function LaporanPage() {
       if (data) {
         data.product_sales = data.product_sales || [];
         data.daily_sales = data.daily_sales || [];
+        
+        // Extract unique product names for filter
+        const products = data.product_sales.map((p: ProductSales) => p.product_name);
+        setAvailableProducts(products);
       }
       
       setReportData(data);
@@ -89,13 +99,64 @@ export default function LaporanPage() {
         product_sales: [],
         daily_sales: [],
       });
+      setAvailableProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter and sort product sales data
+  const getFilteredAndSortedData = () => {
+    if (!reportData) return [];
+    
+    let filtered = [...reportData.product_sales];
+    
+    // Apply product filter
+    if (selectedProduct !== "all") {
+      filtered = filtered.filter(p => p.product_name === selectedProduct);
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let compareValue = 0;
+      
+      switch (sortBy) {
+        case "revenue":
+          compareValue = a.total_revenue - b.total_revenue;
+          break;
+        case "quantity":
+          compareValue = a.total_quantity - b.total_quantity;
+          break;
+        case "orders":
+          compareValue = a.order_count - b.order_count;
+          break;
+      }
+      
+      return sortOrder === "asc" ? compareValue : -compareValue;
+    });
+    
+    return filtered;
+  };
+
+  // Calculate filtered totals
+  const getFilteredTotals = () => {
+    const filtered = getFilteredAndSortedData();
+    
+    return {
+      total_revenue: filtered.reduce((sum, p) => sum + p.total_revenue, 0),
+      total_quantity: filtered.reduce((sum, p) => sum + p.total_quantity, 0),
+      total_orders: filtered.reduce((sum, p) => sum + p.order_count, 0),
+      average_order_value: filtered.length > 0 
+        ? filtered.reduce((sum, p) => sum + p.total_revenue, 0) / filtered.reduce((sum, p) => sum + p.order_count, 0)
+        : 0
+    };
+  };
+
   const exportToExcel = () => {
     if (!reportData) return;
+
+    const filteredData = getFilteredAndSortedData();
+    const filteredTotals = getFilteredTotals();
 
     const wb = XLSX.utils.book_new();
 
@@ -103,19 +164,20 @@ export default function LaporanPage() {
     const summaryData = [
       ["LAPORAN KEUANGAN"],
       ["Periode", `${dateRange.start} s/d ${dateRange.end}`],
+      selectedProduct !== "all" ? ["Filter Produk", selectedProduct] : [],
       [""],
-      ["Total Revenue", `Rp ${reportData.total_revenue.toLocaleString("id-ID")}`],
-      ["Total Orders", reportData.total_orders],
-      ["Total Produk Terjual", reportData.total_products_sold],
-      ["Rata-rata Nilai Order", `Rp ${reportData.average_order_value.toLocaleString("id-ID")}`],
-    ];
+      ["Total Revenue", `Rp ${filteredTotals.total_revenue.toLocaleString("id-ID")}`],
+      ["Total Orders", filteredTotals.total_orders],
+      ["Total Produk Terjual", filteredTotals.total_quantity],
+      ["Rata-rata Nilai Order", `Rp ${filteredTotals.average_order_value.toLocaleString("id-ID")}`],
+    ].filter(row => row.length > 0);
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan");
 
     // Product Sales Sheet
     const productData = [
       ["Nama Produk", "Jumlah Terjual", "Total Revenue", "Jumlah Order"],
-      ...(reportData.product_sales || []).map((p) => [
+      ...filteredData.map((p) => [
         p.product_name,
         p.total_quantity,
         p.total_revenue,
@@ -133,11 +195,18 @@ export default function LaporanPage() {
     const wsDaily = XLSX.utils.aoa_to_sheet(dailyData);
     XLSX.utils.book_append_sheet(wb, wsDaily, "Penjualan Harian");
 
-    XLSX.writeFile(wb, `Laporan_Keuangan_${dateRange.start}_${dateRange.end}.xlsx`);
+    const filename = selectedProduct !== "all" 
+      ? `Laporan_${selectedProduct}_${dateRange.start}_${dateRange.end}.xlsx`
+      : `Laporan_Keuangan_${dateRange.start}_${dateRange.end}.xlsx`;
+    
+    XLSX.writeFile(wb, filename);
   };
 
   const exportToWord = () => {
     if (!reportData) return;
+
+    const filteredData = getFilteredAndSortedData();
+    const filteredTotals = getFilteredTotals();
 
     let htmlContent = `
       <!DOCTYPE html>
@@ -154,18 +223,20 @@ export default function LaporanPage() {
           th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
           th { background-color: #4CAF50; color: white; }
           tr:nth-child(even) { background-color: #f2f2f2; }
+          .filter-info { background: #fff3cd; padding: 10px; margin: 10px 0; border-left: 4px solid #ffc107; }
         </style>
       </head>
       <body>
         <h1>LAPORAN KEUANGAN</h1>
         <p style="text-align: center;">Periode: ${dateRange.start} s/d ${dateRange.end}</p>
+        ${selectedProduct !== "all" ? `<div class="filter-info"><strong>Filter Produk:</strong> ${selectedProduct}</div>` : ''}
         
         <div class="summary">
           <h2>Ringkasan</h2>
-          <div class="summary-item"><strong>Total Revenue:</strong> Rp ${reportData.total_revenue.toLocaleString("id-ID")}</div>
-          <div class="summary-item"><strong>Total Orders:</strong> ${reportData.total_orders}</div>
-          <div class="summary-item"><strong>Total Produk Terjual:</strong> ${reportData.total_products_sold}</div>
-          <div class="summary-item"><strong>Rata-rata Nilai Order:</strong> Rp ${reportData.average_order_value.toLocaleString("id-ID")}</div>
+          <div class="summary-item"><strong>Total Revenue:</strong> Rp ${filteredTotals.total_revenue.toLocaleString("id-ID")}</div>
+          <div class="summary-item"><strong>Total Orders:</strong> ${filteredTotals.total_orders}</div>
+          <div class="summary-item"><strong>Total Produk Terjual:</strong> ${filteredTotals.total_quantity}</div>
+          <div class="summary-item"><strong>Rata-rata Nilai Order:</strong> Rp ${filteredTotals.average_order_value.toLocaleString("id-ID")}</div>
         </div>
 
         <h2>Penjualan Per Produk</h2>
@@ -179,7 +250,7 @@ export default function LaporanPage() {
             </tr>
           </thead>
           <tbody>
-            ${(reportData.product_sales || []).map((p) => `
+            ${filteredData.map((p) => `
               <tr>
                 <td>${p.product_name}</td>
                 <td>${p.total_quantity}</td>
@@ -214,7 +285,11 @@ export default function LaporanPage() {
     `;
 
     const blob = new Blob([htmlContent], { type: "application/msword" });
-    saveAs(blob, `Laporan_Keuangan_${dateRange.start}_${dateRange.end}.doc`);
+    const filename = selectedProduct !== "all" 
+      ? `Laporan_${selectedProduct}_${dateRange.start}_${dateRange.end}.doc`
+      : `Laporan_Keuangan_${dateRange.start}_${dateRange.end}.doc`;
+    
+    saveAs(blob, filename);
   };
 
   const downloadChart = async (chartId: string) => {
@@ -394,37 +469,236 @@ export default function LaporanPage() {
         </div>
       </motion.div>
 
+      {/* Filter and Sort Controls */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        style={{
+          background: 'white',
+          border: '2px solid #1a1a1a',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '4px 4px 0 rgba(0,0,0,0.1)'
+        }}
+      >
+        <div style={{ 
+          display: 'flex', 
+          gap: '20px', 
+          flexWrap: 'wrap',
+          alignItems: 'flex-end'
+        }}>
+          {/* Product Filter */}
+          <div style={{ flex: '1', minWidth: '200px' }}>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: 700, 
+              marginBottom: '8px',
+              color: '#1a1a1a'
+            }}>
+              🔍 Filter Produk
+            </label>
+            <select
+              value={selectedProduct}
+              onChange={(e) => setSelectedProduct(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #1a1a1a',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 600,
+                background: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">📊 Semua Produk</option>
+              {availableProducts.map((product, idx) => (
+                <option key={idx} value={product}>
+                  {product}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div style={{ flex: '1', minWidth: '200px' }}>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: 700, 
+              marginBottom: '8px',
+              color: '#1a1a1a'
+            }}>
+              📈 Urutkan Berdasarkan
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "revenue" | "quantity" | "orders")}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #1a1a1a',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 600,
+                background: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="revenue">💰 Total Revenue</option>
+              <option value="quantity">📦 Jumlah Terjual</option>
+              <option value="orders">🛒 Jumlah Order</option>
+            </select>
+          </div>
+
+          {/* Sort Order */}
+          <div style={{ flex: '1', minWidth: '200px' }}>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: 700, 
+              marginBottom: '8px',
+              color: '#1a1a1a'
+            }}>
+              🔄 Urutan
+            </label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #1a1a1a',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 600,
+                background: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="desc">⬇️ Tertinggi ke Terendah</option>
+              <option value="asc">⬆️ Terendah ke Tertinggi</option>
+            </select>
+          </div>
+
+          {/* Reset Button */}
+          <button
+            onClick={() => {
+              setSelectedProduct("all");
+              setSortBy("revenue");
+              setSortOrder("desc");
+            }}
+            style={{
+              padding: '12px 24px',
+              background: '#ef4444',
+              color: 'white',
+              border: '2px solid #1a1a1a',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dc2626';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ef4444';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+            Reset Filter
+          </button>
+        </div>
+
+        {/* Filter Info */}
+        {selectedProduct !== "all" && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px 16px',
+            background: '#fef3c7',
+            border: '2px solid #f59e0b',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#92400e' }}>
+              Filter aktif: Menampilkan data untuk produk "{selectedProduct}"
+            </span>
+          </div>
+        )}
+      </motion.div>
+
       {/* Summary Cards */}
       <div className="summary-cards">
         <motion.div className="summary-card" whileHover={{ scale: 1.05 }}>
           <div className="card-icon">Rp</div>
           <div className="card-content">
-            <h3>Total Revenue</h3>
-            <p className="card-value">Rp {reportData.total_revenue.toLocaleString("id-ID")}</p>
+            <h3>Total Revenue {selectedProduct !== "all" && "(Filtered)"}</h3>
+            <p className="card-value">Rp {getFilteredTotals().total_revenue.toLocaleString("id-ID")}</p>
+            {selectedProduct !== "all" && (
+              <small style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                Dari semua: Rp {reportData.total_revenue.toLocaleString("id-ID")}
+              </small>
+            )}
           </div>
         </motion.div>
 
         <motion.div className="summary-card" whileHover={{ scale: 1.05 }}>
           <div className="card-icon">#</div>
           <div className="card-content">
-            <h3>Total Orders</h3>
-            <p className="card-value">{reportData.total_orders}</p>
+            <h3>Total Orders {selectedProduct !== "all" && "(Filtered)"}</h3>
+            <p className="card-value">{getFilteredTotals().total_orders}</p>
+            {selectedProduct !== "all" && (
+              <small style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                Dari semua: {reportData.total_orders}
+              </small>
+            )}
           </div>
         </motion.div>
 
         <motion.div className="summary-card" whileHover={{ scale: 1.05 }}>
           <div className="card-icon">Qty</div>
           <div className="card-content">
-            <h3>Produk Terjual</h3>
-            <p className="card-value">{reportData.total_products_sold}</p>
+            <h3>Produk Terjual {selectedProduct !== "all" && "(Filtered)"}</h3>
+            <p className="card-value">{getFilteredTotals().total_quantity}</p>
+            {selectedProduct !== "all" && (
+              <small style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                Dari semua: {reportData.total_products_sold}
+              </small>
+            )}
           </div>
         </motion.div>
 
         <motion.div className="summary-card" whileHover={{ scale: 1.05 }}>
           <div className="card-icon">Avg</div>
           <div className="card-content">
-            <h3>Rata-rata Order</h3>
-            <p className="card-value">Rp {reportData.average_order_value.toLocaleString("id-ID")}</p>
+            <h3>Rata-rata Order {selectedProduct !== "all" && "(Filtered)"}</h3>
+            <p className="card-value">Rp {getFilteredTotals().average_order_value.toLocaleString("id-ID")}</p>
+            {selectedProduct !== "all" && (
+              <small style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                Dari semua: Rp {reportData.average_order_value.toLocaleString("id-ID")}
+              </small>
+            )}
           </div>
         </motion.div>
       </div>
@@ -452,7 +726,7 @@ export default function LaporanPage() {
           </div>
           <ResponsiveContainer width="100%" height={400}>
             <BarChart 
-              data={reportData.product_sales || []}
+              data={getFilteredAndSortedData()}
               margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
             >
               <defs>
@@ -532,7 +806,7 @@ export default function LaporanPage() {
                 </filter>
               </defs>
               <Pie
-                data={reportData.product_sales || []}
+                data={getFilteredAndSortedData()}
                 dataKey="total_revenue"
                 nameKey="product_name"
                 cx="50%"
@@ -545,7 +819,7 @@ export default function LaporanPage() {
                 animationDuration={1000}
                 style={{ filter: 'url(#shadow)' }}
               >
-                {(reportData.product_sales || []).map((entry, index) => (
+                {getFilteredAndSortedData().map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={COLORS[index % COLORS.length]}
@@ -688,7 +962,7 @@ export default function LaporanPage() {
             </tr>
           </thead>
           <tbody>
-            {(reportData.product_sales || []).map((product, index) => (
+            {getFilteredAndSortedData().map((product, index) => (
               <tr key={product.product_id}>
                 <td>{index + 1}</td>
                 <td>{product.product_name}</td>
@@ -701,11 +975,11 @@ export default function LaporanPage() {
           </tbody>
           <tfoot>
             <tr className="total-row">
-              <td colSpan={2}><strong>TOTAL</strong></td>
-              <td><strong>{reportData.total_products_sold}</strong></td>
-              <td><strong>Rp {reportData.total_revenue.toLocaleString("id-ID")}</strong></td>
-              <td><strong>{reportData.total_orders}</strong></td>
-              <td><strong>Rp {reportData.average_order_value.toLocaleString("id-ID")}</strong></td>
+              <td colSpan={2}><strong>TOTAL {selectedProduct !== "all" ? "(FILTERED)" : ""}</strong></td>
+              <td><strong>{getFilteredTotals().total_quantity}</strong></td>
+              <td><strong>Rp {getFilteredTotals().total_revenue.toLocaleString("id-ID")}</strong></td>
+              <td><strong>{getFilteredTotals().total_orders}</strong></td>
+              <td><strong>Rp {getFilteredTotals().average_order_value.toLocaleString("id-ID")}</strong></td>
             </tr>
           </tfoot>
         </table>

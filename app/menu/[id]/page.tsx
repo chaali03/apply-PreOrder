@@ -18,6 +18,11 @@ interface ProductVariant {
   is_available: boolean;
 }
 
+interface ProductCondition {
+  name: string;
+  price_adjustment: number;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -34,6 +39,7 @@ interface Product {
   is_available: boolean;
   min_order: number;
   variants?: ProductVariant[];
+  conditions?: ProductCondition[];
 }
 
 export default function ProductDetailPage() {
@@ -323,7 +329,8 @@ export default function ProductDetailPage() {
                       image: getImageUrl(product.image_url_1),
                       category: product.category,
                       min_order: product.min_order || 1,
-                      variant: selectedVariant ? selectedVariant.name : null
+                      variant: selectedVariant ? selectedVariant.name : null,
+                      conditions: product.conditions || []
                     },
                     quantity: quantity,
                     total: totalPrice
