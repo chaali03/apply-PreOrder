@@ -6,6 +6,7 @@
 [build.environment]
   NPM_FLAGS = "--legacy-peer-deps"
   NODE_VERSION = "22.22.0"
+  NEXT_PUBLIC_BACKEND_URL = "https://api.scafffood.my.id"
 
   ## Uncomment to use this redirect for Single Page Applications like create-react-app.
   ## Not needed for static site generators.
