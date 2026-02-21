@@ -498,7 +498,7 @@ export default function LaporanPage() {
               marginBottom: '8px',
               color: '#1a1a1a'
             }}>
-              🔍 Filter Produk
+              Filter Produk
             </label>
             <select
               value={selectedProduct}
@@ -514,7 +514,7 @@ export default function LaporanPage() {
                 cursor: 'pointer'
               }}
             >
-              <option value="all">📊 Semua Produk</option>
+              <option value="all">Semua Produk</option>
               {availableProducts.map((product, idx) => (
                 <option key={idx} value={product}>
                   {product}
@@ -532,7 +532,7 @@ export default function LaporanPage() {
               marginBottom: '8px',
               color: '#1a1a1a'
             }}>
-              📈 Urutkan Berdasarkan
+              Urutkan Berdasarkan
             </label>
             <select
               value={sortBy}
@@ -548,9 +548,9 @@ export default function LaporanPage() {
                 cursor: 'pointer'
               }}
             >
-              <option value="revenue">💰 Total Revenue</option>
-              <option value="quantity">📦 Jumlah Terjual</option>
-              <option value="orders">🛒 Jumlah Order</option>
+              <option value="revenue">Total Revenue</option>
+              <option value="quantity">Jumlah Terjual</option>
+              <option value="orders">Jumlah Order</option>
             </select>
           </div>
 
@@ -563,7 +563,7 @@ export default function LaporanPage() {
               marginBottom: '8px',
               color: '#1a1a1a'
             }}>
-              🔄 Urutan
+              Urutan
             </label>
             <select
               value={sortOrder}
@@ -579,8 +579,8 @@ export default function LaporanPage() {
                 cursor: 'pointer'
               }}
             >
-              <option value="desc">⬇️ Tertinggi ke Terendah</option>
-              <option value="asc">⬆️ Terendah ke Tertinggi</option>
+              <option value="desc">Tertinggi ke Terendah</option>
+              <option value="asc">Terendah ke Tertinggi</option>
             </select>
           </div>
 

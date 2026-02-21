@@ -689,7 +689,7 @@ export default function OrderPage() {
                           fontWeight: 600,
                           color: '#374151'
                         }}>
-                          🤖 AI sedang memvalidasi alamat...
+                          AI sedang memvalidasi alamat...
                         </p>
                         <p style={{ 
                           margin: '4px 0 0 0', 
@@ -765,7 +765,7 @@ export default function OrderPage() {
                             alignItems: 'center',
                             gap: '6px'
                           }}>
-                            🤖 AI Confidence: {addressValidation.confidence}%
+                            AI Confidence: {addressValidation.confidence}%
                           </p>
                           {addressValidation.suggestions && addressValidation.suggestions.length > 0 && (
                             <div style={{ 
@@ -779,7 +779,7 @@ export default function OrderPage() {
                                 fontWeight: 600,
                                 color: '#374151'
                               }}>
-                                💡 Saran:
+                                Saran:
                               </p>
                               <ul style={{ 
                                 margin: 0, 
