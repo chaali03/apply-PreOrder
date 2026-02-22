@@ -48,7 +48,7 @@ export default function OrderPage() {
         parsedConditions = [];
       }
       
-      setCartItems([{
+      const cartItem = {
         id: orderData.product.id,
         name: orderData.product.name,
         price: orderData.product.price,
@@ -60,7 +60,15 @@ export default function OrderPage() {
         conditions: Array.isArray(parsedConditions) ? parsedConditions : [],
         available_days_tb: orderData.product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
         available_days_luar_tb: orderData.product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      }]);
+      };
+      
+      console.log('📦 Loaded product data:', {
+        name: cartItem.name,
+        available_days_tb: cartItem.available_days_tb,
+        available_days_luar_tb: cartItem.available_days_luar_tb
+      });
+      
+      setCartItems([cartItem]);
     }
 
     // Auto-fill customer info from localStorage
@@ -219,11 +227,12 @@ export default function OrderPage() {
     
     // Use available_days based on delivery location
     const item = cartItems[0];
-    if (customerInfo.deliveryLocation === 'TB') {
-      return item.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    } else {
-      return item.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    }
+    const availableDays = customerInfo.deliveryLocation === 'TB' 
+      ? (item.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])
+      : (item.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
+    
+    console.log('🗓️ Available days for', customerInfo.deliveryLocation, ':', availableDays);
+    return availableDays;
   };
 
   // Helper function to check if a date is available
@@ -451,9 +460,9 @@ export default function OrderPage() {
         const { latitude, longitude } = position.coords;
         
         try {
-          // Use Nominatim (OpenStreetMap) for reverse geocoding
+          // Use Nominatim (OpenStreetMap) for reverse geocoding with more details
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=id`,
             {
               headers: {
                 'User-Agent': 'ScaffFood-App'
@@ -463,15 +472,35 @@ export default function OrderPage() {
           
           const data = await response.json();
           
-          if (data && data.display_name) {
-            // Extract relevant address parts
+          if (data && data.address) {
+            // Extract detailed address parts
             const address = data.address;
             let formattedAddress = '';
             
-            if (address.road) formattedAddress += address.road;
-            if (address.suburb) formattedAddress += (formattedAddress ? ', ' : '') + address.suburb;
-            if (address.city || address.city_district) formattedAddress += (formattedAddress ? ', ' : '') + (address.city || address.city_district);
-            if (address.state) formattedAddress += (formattedAddress ? ', ' : '') + address.state;
+            // Build detailed address
+            const parts = [];
+            
+            // Add house number and road
+            if (address.house_number) parts.push(address.house_number);
+            if (address.road) parts.push(address.road);
+            
+            // Add neighbourhood/suburb
+            if (address.neighbourhood) parts.push(address.neighbourhood);
+            else if (address.suburb) parts.push(address.suburb);
+            
+            // Add village/town/city
+            if (address.village) parts.push(address.village);
+            else if (address.town) parts.push(address.town);
+            else if (address.city) parts.push(address.city);
+            else if (address.city_district) parts.push(address.city_district);
+            
+            // Add state/province
+            if (address.state) parts.push(address.state);
+            
+            // Add postcode
+            if (address.postcode) parts.push(address.postcode);
+            
+            formattedAddress = parts.join(', ');
             
             // Fallback to display_name if no structured address
             if (!formattedAddress) {
@@ -483,7 +512,7 @@ export default function OrderPage() {
               address: formattedAddress
             }));
             
-            setNotificationMessage('Lokasi berhasil didapatkan');
+            setNotificationMessage('✓ Lokasi berhasil didapatkan');
             setShowNotification(true);
             setTimeout(() => setShowNotification(false), 3000);
           } else {
@@ -521,7 +550,7 @@ export default function OrderPage() {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0
       }
     );

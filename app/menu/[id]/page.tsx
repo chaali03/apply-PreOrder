@@ -480,9 +480,8 @@ export default function ProductDetailPage() {
                         : (product.min_order_luar_tb || product.min_order || 1),
                       variant: selectedVariant ? selectedVariant.name : null,
                       conditions: product.conditions || [],
-                      available_days: deliveryLocation === "TB"
-                        ? (product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
-                        : (product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+                      available_days_tb: product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+                      available_days_luar_tb: product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
                     },
                     quantity: quantity,
                     total: totalPrice,
