@@ -54,6 +54,10 @@ function validateAddressWithAI(address: string): ValidationResult {
       'pekapuran', 'peka puran', 'pekapurann', 'pekapuran', 'pkapuran',
       'pekapuran', 'pekapuran', 'pekapuran', 'pekapuran', 'pekapuran'
     ],
+    gasAlam: [
+      'gas alam', 'gasalam', 'gas alam depok', 'gasalam depok',
+      'gas alam', 'gas alam', 'gas alam', 'gas alam', 'gas alam'
+    ],
     tarunaBhakti: [
       'taruna bhakti', 'tarunabhakti', 'tb', 'smk taruna bhakti', 
       'smk tb', 'taruna bakti', 'taruna bhakti', 'taruna bhakti',
@@ -87,6 +91,18 @@ function validateAddressWithAI(address: string): ValidationResult {
           suggestions: ['Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti']
         };
       }
+    }
+  }
+
+  // Check for Gas Alam Depok
+  for (const variant of allowedAreas.gasAlam) {
+    if (normalized.includes(variant)) {
+      return {
+        isValid: true,
+        message: '✅ Alamat valid! Area Gas Alam Depok dapat dilayani.',
+        confidence: 95,
+        detectedArea: 'Gas Alam Depok'
+      };
     }
   }
 
@@ -142,10 +158,10 @@ function validateAddressWithAI(address: string): ValidationResult {
   if (foundDepok) {
     return {
       isValid: false,
-      message: '❌ Maaf, kami hanya melayani area Cimangis, Pekapuran, dan sekitar TB di Depok.',
+      message: '❌ Maaf, kami hanya melayani area Cimangis, Pekapuran, Gas Alam, dan sekitar TB di Depok.',
       confidence: 90,
       suggestions: [
-        'Area yang dilayani: Cimangis, Pekapuran, SMK Taruna Bhakti',
+        'Area yang dilayani: Cimangis, Pekapuran, Gas Alam Depok, SMK Taruna Bhakti',
         'Pastikan alamat Anda berada di salah satu area tersebut'
       ]
     };
@@ -164,7 +180,7 @@ function validateAddressWithAI(address: string): ValidationResult {
         message: `❌ Maaf, area ${area.charAt(0).toUpperCase() + area.slice(1)} belum dapat kami layani.`,
         confidence: 95,
         suggestions: [
-          'Kami hanya melayani: Cimangis, Pekapuran, dan area TB di Depok',
+          'Kami hanya melayani: Cimangis, Pekapuran, Gas Alam Depok, dan area TB di Depok',
           'Hubungi kami untuk informasi pengiriman ke area lain'
         ]
       };
@@ -179,7 +195,7 @@ function validateAddressWithAI(address: string): ValidationResult {
       confidence: 50,
       suggestions: [
         'Contoh: Jl. Raya Cimangis No. 123, RT 01/RW 05, Cimangis, Depok',
-        'Sertakan nama area: Cimangis, Pekapuran, atau TB'
+        'Sertakan nama area: Cimangis, Pekapuran, Gas Alam, atau TB'
       ]
     };
   }
@@ -187,11 +203,12 @@ function validateAddressWithAI(address: string): ValidationResult {
   // Default: unclear address
   return {
     isValid: false,
-    message: '⚠️ Alamat tidak jelas. Pastikan alamat berada di area Cimangis, Pekapuran, atau TB Depok.',
+    message: '⚠️ Alamat tidak jelas. Pastikan alamat berada di area Cimangis, Pekapuran, Gas Alam, atau TB Depok.',
     confidence: 60,
     suggestions: [
-      'Sertakan nama area yang jelas: Cimangis, Pekapuran, atau TB',
+      'Sertakan nama area yang jelas: Cimangis, Pekapuran, Gas Alam, atau TB',
       'Contoh: Jl. Raya Cimangis No. 123, Cimangis, Depok',
+      'Atau: Gas Alam Depok',
       'Atau: SMK Taruna Bhakti, Depok'
     ]
   };
