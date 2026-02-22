@@ -972,22 +972,26 @@ func main() {
 		
 		// Use map to allow NULL updates for qris_id
 		updateMap := map[string]interface{}{
-			"name":              updateData.Name,
-			"short_description": updateData.ShortDescription,
-			"description":       updateData.Description,
-			"price":             updateData.Price,
-			"category":          updateData.Category,
-			"tag":               updateData.Tag,
-			"tag_color":         updateData.TagColor,
-			"image_url_1":       updateData.ImageURL1,
-			"image_url_2":       updateData.ImageURL2,
-			"image_url_3":       updateData.ImageURL3,
-			"stock":             updateData.Stock,
-			"is_available":      updateData.IsAvailable,
-			"min_order":         updateData.MinOrder,
-			"conditions":        updateData.Conditions,
-			"addons":            updateData.Addons,
-			"qris_id":           updateData.QRISId, // This will be nil if not set
+			"name":                  updateData.Name,
+			"short_description":     updateData.ShortDescription,
+			"description":           updateData.Description,
+			"price":                 updateData.Price,
+			"category":              updateData.Category,
+			"tag":                   updateData.Tag,
+			"tag_color":             updateData.TagColor,
+			"image_url_1":           updateData.ImageURL1,
+			"image_url_2":           updateData.ImageURL2,
+			"image_url_3":           updateData.ImageURL3,
+			"stock":                 updateData.Stock,
+			"is_available":          updateData.IsAvailable,
+			"min_order":             updateData.MinOrder,
+			"min_order_tb":          updateData.MinOrderTB,
+			"min_order_luar_tb":     updateData.MinOrderLuarTB,
+			"available_days_tb":     updateData.AvailableDaysTB,
+			"available_days_luar_tb": updateData.AvailableDaysLuarTB,
+			"conditions":            updateData.Conditions,
+			"addons":                updateData.Addons,
+			"qris_id":               updateData.QRISId, // This will be nil if not set
 		}
 		
 		result := DB.Model(&product).Updates(updateMap)
