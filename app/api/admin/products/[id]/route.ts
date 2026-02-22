@@ -6,7 +6,7 @@ export async function PUT(
 ) {
   try {
     const params = await context.params;
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const backendUrl = 'https://api.scafffood.my.id';
     const targetUrl = `${backendUrl}/api/admin/products/${params.id}`;
     
     const body = await request.json();
@@ -39,7 +39,7 @@ export async function DELETE(
 ) {
   try {
     const params = await context.params;
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const backendUrl = 'https://api.scafffood.my.id';
     const targetUrl = `${backendUrl}/api/admin/products/${params.id}`;
     
     console.log(`[Proxy] DELETE ${targetUrl}`);
@@ -68,7 +68,7 @@ export async function PATCH(
 ) {
   try {
     const params = await context.params;
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const backendUrl = 'https://api.scafffood.my.id';
     const targetUrl = `${backendUrl}/api/admin/products/${params.id}/toggle`;
     
     console.log(`[Proxy] PATCH ${targetUrl}`);
