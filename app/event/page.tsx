@@ -625,199 +625,96 @@ export default function EventPage() {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
+      {/* Footer - Similar to Home Page */}
       <footer style={{
-        marginTop: '60px',
-        padding: '40px 20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderTop: '4px solid #000',
-        boxShadow: '0 -8px 0 rgba(0,0,0,0.1)'
+        background: '#1a1a1a',
+        color: 'white',
+        padding: '60px 20px 20px',
+        marginTop: '80px'
       }}>
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
-          textAlign: 'center'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '40px',
+          marginBottom: '40px'
         }}>
-          {/* Instagram CTA */}
-          <div style={{
-            background: 'white',
-            border: '3px solid #000',
-            borderRadius: '16px',
-            padding: '32px',
-            marginBottom: '32px',
-            boxShadow: '8px 8px 0 rgba(0,0,0,0.2)',
-            transform: 'rotate(-1deg)'
-          }}>
+          <div>
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
+              fontSize: '24px',
+              fontWeight: 900,
+              marginBottom: '16px',
+              letterSpacing: '1px'
             }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '3px solid #000',
-                boxShadow: '4px 4px 0 rgba(0,0,0,0.2)'
-              }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" fill="none" stroke="white" strokeWidth="2"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="white" strokeWidth="2"></line>
-                </svg>
-              </div>
-              <div>
-                <h3 style={{
-                  fontSize: '28px',
-                  fontWeight: 900,
-                  color: '#000',
-                  margin: '0 0 8px 0',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  Follow Instagram Kami!
-                </h3>
-                <p style={{
-                  fontSize: '16px',
-                  color: '#666',
-                  margin: '0 0 20px 0',
-                  fontWeight: 600
-                }}>
-                  Dapatkan update terbaru, promo, dan event menarik
-                </p>
-              </div>
-              <a
-                href="https://instagram.com/scafffood"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 32px',
-                  background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-                  color: 'white',
-                  border: '3px solid #000',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  boxShadow: '4px 4px 0 rgba(0,0,0,0.3)',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '6px 6px 0 rgba(0,0,0,0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '4px 4px 0 rgba(0,0,0,0.3)';
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" fill="none" stroke="white" strokeWidth="2"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="white" strokeWidth="2"></line>
-                </svg>
-                @scafffood
-              </a>
+              SCAFF*FOOD
             </div>
-          </div>
-
-          {/* Footer Info */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '32px',
-            marginBottom: '32px',
-            textAlign: 'left'
-          }}>
-            <div>
-              <h4 style={{
-                fontSize: '20px',
-                fontWeight: 800,
-                color: 'white',
-                marginBottom: '16px',
-                textTransform: 'uppercase'
-              }}>
-                SCAFF*FOOD
-              </h4>
-              <p style={{
-                fontSize: '14px',
-                color: 'rgba(255,255,255,0.9)',
-                lineHeight: '1.6',
-                margin: 0
-              }}>
-                Preorder makanan terbaik untuk siswa SMK Taruna Bhakti dan sekitarnya. Pesan sekarang, nikmati nanti!
-              </p>
-            </div>
-            <div>
-              <h4 style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: 'white',
-                marginBottom: '16px'
-              }}>
-                Menu
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <Link href="/" style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none', fontSize: '14px' }}>Home</Link>
-                <Link href="/menu" style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none', fontSize: '14px' }}>Menu</Link>
-                <Link href="/event" style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none', fontSize: '14px' }}>Event</Link>
-                <Link href="/locations" style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none', fontSize: '14px' }}>Lokasi</Link>
-              </div>
-            </div>
-            <div>
-              <h4 style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: 'white',
-                marginBottom: '16px'
-              }}>
-                Area Layanan
-              </h4>
-              <p style={{
-                fontSize: '14px',
-                color: 'rgba(255,255,255,0.9)',
-                lineHeight: '1.6',
-                margin: 0
-              }}>
-                SMK Taruna Bhakti<br />
-                Cimangis, Depok<br />
-                Pekapuran, Depok<br />
-                Gas Alam, Depok
-              </p>
-            </div>
-          </div>
-
-          {/* Copyright */}
-          <div style={{
-            paddingTop: '24px',
-            borderTop: '2px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <p style={{
-              fontSize: '14px',
-              color: 'rgba(255,255,255,0.9)',
-              margin: 0,
-              fontWeight: 600
-            }}>
-              © 2025 SCAFF*FOOD GROUP. All rights reserved.
-            </p>
-            <p style={{
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.7)',
-              margin: '8px 0 0 0'
-            }}>
-              Made with ❤️ for SMK Taruna Bhakti
+            <p style={{ color: '#999', lineHeight: 1.6, fontSize: '14px' }}>
+              Dari dapur, kami menghadirkan menu dengan rasa yang konsisten dan nuansa yang hangat.
             </p>
           </div>
+          
+          <div>
+            <h4 style={{ 
+              fontSize: '14px', 
+              fontWeight: 700, 
+              marginBottom: '16px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              Nav
+            </h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <li style={{ marginBottom: '8px' }}>
+                <Link href="/" style={{ color: '#999', textDecoration: 'none', fontSize: '14px' }}>Home</Link>
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <Link href="/menu" style={{ color: '#999', textDecoration: 'none', fontSize: '14px' }}>Menu</Link>
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <Link href="/event" style={{ color: '#999', textDecoration: 'none', fontSize: '14px' }}>Event</Link>
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <Link href="/kurir" style={{ color: '#999', textDecoration: 'none', fontSize: '14px' }}>Kurir</Link>
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <Link href="/locations" style={{ color: '#999', textDecoration: 'none', fontSize: '14px' }}>Location</Link>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 style={{ 
+              fontSize: '14px', 
+              fontWeight: 700, 
+              marginBottom: '16px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              BUKA
+            </h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <li style={{ color: '#999', fontSize: '14px' }}>
+                Buka Setiap Hari Operasional TB
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          paddingTop: '20px',
+          borderTop: '1px solid #333',
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          fontSize: '12px',
+          color: '#666'
+        }}>
+          <span>© 2025 SCAFF.FOOD GROUP</span>
+          <span>DESIGNED BY MAMAD RPL4</span>
         </div>
       </footer>
     </div>
