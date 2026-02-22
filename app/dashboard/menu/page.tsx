@@ -447,8 +447,18 @@ export default function DashboardMenuPage() {
 
       const data = await response.json();
       console.log('Server response:', data);
+      console.log('Response success:', data.success);
+      console.log('Response message:', data.message);
+      console.log('Response data:', data.data);
       
       if (data.success) {
+        console.log('✅ Product saved successfully!');
+        if (data.data) {
+          console.log('Returned min_order_tb:', data.data.min_order_tb);
+          console.log('Returned min_order_luar_tb:', data.data.min_order_luar_tb);
+          console.log('Returned available_days_tb:', data.data.available_days_tb);
+          console.log('Returned available_days_luar_tb:', data.data.available_days_luar_tb);
+        }
         showNotification(data.message, 'success');
         setShowModal(false);
         fetchProducts();
