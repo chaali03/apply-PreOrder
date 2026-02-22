@@ -1121,14 +1121,23 @@ func main() {
 			log.Printf("📦 No variants received for product %s", id)
 		}
 
-		// Reload product with variants
-		DB.Preload("Variants").First(&product, "id = ?", id)
+		// Reload product with variants - use a fresh query
+		var updatedProduct Product
+		if err := DB.Preload("Variants").First(&updatedProduct, "id = ?", id).Error; err != nil {
+			log.Printf("❌ Error reloading product: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Product updated but failed to reload",
+			})
+		}
 
-		log.Printf("✅ Product updated: %s with %d variants", product.Name, len(product.Variants))
+		log.Printf("✅ Product updated: %s with %d variants", updatedProduct.Name, len(updatedProduct.Variants))
+		log.Printf("📦 Reloaded values: MinOrderTB=%d, MinOrderLuarTB=%d", updatedProduct.MinOrderTB, updatedProduct.MinOrderLuarTB)
+		log.Printf("📦 Reloaded days: TB=%v, LuarTB=%v", updatedProduct.AvailableDaysTB, updatedProduct.AvailableDaysLuarTB)
 
 		return c.JSON(fiber.Map{
 			"success": true,
-			"data":    product,
+			"data":    updatedProduct,
 			"message": "Product updated successfully",
 		})
 	})
