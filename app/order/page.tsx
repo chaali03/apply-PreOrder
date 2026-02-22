@@ -910,7 +910,6 @@ export default function OrderPage() {
                                 fontWeight: 600,
                                 color: '#374151'
                               }}>
-                                🤖 AI mendeteksi lokasi pengiriman:
                               </p>
                               <p style={{ 
                                 margin: '4px 0 0 0', 
@@ -1228,7 +1227,8 @@ export default function OrderPage() {
                             const date = new Date(currentYear, currentMonth, day);
                             const dateStr = formatDateForInput(date);
                             const isPast = date < new Date(today.setHours(0, 0, 0, 0));
-                            const isAvailable = !isPast && isDateAvailable(date);
+                            const isSunday = date.getDay() === 0; // Sunday = 0
+                            const isAvailable = !isPast && !isSunday && isDateAvailable(date);
                             const isToday = day === today.getDate() && currentMonth === today.getMonth();
                             
                             days.push(
@@ -1239,25 +1239,25 @@ export default function OrderPage() {
                                 onClick={() => isAvailable && setDeliveryDate(dateStr)}
                                 style={{
                                   padding: '12px',
-                                  border: isToday ? '2px solid #2563eb' : '2px solid transparent',
+                                  border: isToday ? '2px solid #2563eb' : isSunday ? '2px solid #ef4444' : '2px solid transparent',
                                   borderRadius: '8px',
-                                  background: isAvailable ? '#f0fdf4' : '#f3f4f6',
-                                  color: isAvailable ? '#065f46' : '#9ca3af',
+                                  background: isSunday ? '#fee2e2' : (isAvailable ? '#f0fdf4' : '#f3f4f6'),
+                                  color: isSunday ? '#dc2626' : (isAvailable ? '#065f46' : '#9ca3af'),
                                   fontSize: '14px',
                                   fontWeight: isToday ? 700 : 600,
                                   cursor: isAvailable ? 'pointer' : 'not-allowed',
                                   transition: 'all 0.2s',
-                                  opacity: isAvailable ? 1 : 0.5
+                                  opacity: isSunday ? 0.7 : (isAvailable ? 1 : 0.5)
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (isAvailable) {
+                                  if (isAvailable && !isSunday) {
                                     e.currentTarget.style.background = '#10b981';
                                     e.currentTarget.style.color = 'white';
                                     e.currentTarget.style.transform = 'scale(1.05)';
                                   }
                                 }}
                                 onMouseLeave={(e) => {
-                                  if (isAvailable) {
+                                  if (isAvailable && !isSunday) {
                                     e.currentTarget.style.background = '#f0fdf4';
                                     e.currentTarget.style.color = '#065f46';
                                     e.currentTarget.style.transform = 'scale(1)';
