@@ -235,21 +235,28 @@ export default function OrderPage() {
       // Simulate AI verification (in production, call actual AI API)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Mock AI analysis
-      const mockAnalysis = {
-        isValid: Math.random() > 0.3, // 70% success rate for demo
-        message: Math.random() > 0.3 
-          ? `Bukti pembayaran terverifikasi. Nominal sesuai: Rp ${total.toLocaleString('id-ID')}`
-          : 'Bukti pembayaran tidak valid. Nominal tidak sesuai atau gambar hasil edit.',
-        confidence: Math.random() * 30 + 70 // 70-100%
-      };
-
-      setVerificationResult(mockAnalysis);
-
-      if (!mockAnalysis.isValid) {
-        setNotificationMessage(mockAnalysis.message);
+      // Simple validation: check image format and size
+      const isValidFormat = imageData.startsWith('data:image/');
+      const imageSize = imageData.length;
+      
+      if (!isValidFormat || imageSize < 10000) {
+        const result = {
+          isValid: false,
+          message: 'Format gambar tidak valid atau ukuran terlalu kecil. Upload screenshot asli dari aplikasi banking.',
+          confidence: 95
+        };
+        setVerificationResult(result);
+        setNotificationMessage(result.message);
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 5000);
+      } else {
+        // Accept valid images with instruction
+        const result = {
+          isValid: true,
+          message: `✅ Format bukti pembayaran valid. PENTING: Pastikan transfer ke rekening atas nama SCAFF*FOOD dengan nominal Rp ${total.toLocaleString('id-ID')}`,
+          confidence: 85
+        };
+        setVerificationResult(result);
       }
     } catch (error) {
       console.error('Error verifying payment:', error);
@@ -653,13 +660,13 @@ export default function OrderPage() {
                   <label className="form-label">Alamat Lengkap</label>
                   <textarea
                     className="form-textarea"
-                    placeholder="Masukkan alamat lengkap pengiriman"
+                    placeholder="Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti"
                     rows={4}
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                   />
                   <p className="form-hint">
-                    Contoh: Jl. Raya Cimangis No. 123, RT 01/RW 05, Cimangis, Depok
+                    Untuk SMK TB: Sebutkan kelas & ruangan (contoh: Kelas XII RPL 4, Ruang 304). Untuk luar TB: Alamat lengkap dengan RT/RW
                   </p>
                   
                   {/* AI Address Validation Result */}
@@ -1133,7 +1140,10 @@ export default function OrderPage() {
                   {/* Upload Bukti Pembayaran */}
                   <div className="payment-proof-upload">
                     <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
-                    <p className="proof-instruction-inline">Setelah melakukan pembayaran, upload bukti transfer untuk verifikasi otomatis dengan AI</p>
+                    <p className="proof-instruction-inline">
+                      <strong style={{ color: '#ef4444' }}>PENTING:</strong> Transfer harus ke rekening atas nama <strong>SCAFF*FOOD</strong>. 
+                      Upload screenshot asli dari aplikasi banking (jangan di-edit).
+                    </p>
                     
                     <div className="upload-area-inline">
                       <input
@@ -1265,7 +1275,7 @@ export default function OrderPage() {
                   </div>
                   <div className="info-row">
                     <span>Estimasi Pengiriman</span>
-                    <strong>30-45 menit</strong>
+                    <strong>30 menit-48 jam (kecuali hari minggu)</strong>
                   </div>
                 </div>
 

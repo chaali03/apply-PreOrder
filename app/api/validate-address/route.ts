@@ -67,12 +67,26 @@ function validateAddressWithAI(address: string): ValidationResult {
   // Check for Taruna Bhakti / TB (always allowed)
   for (const variant of allowedAreas.tarunaBhakti) {
     if (normalized.includes(variant)) {
-      return {
-        isValid: true,
-        message: '✅ Alamat valid! Area TB/SMK Taruna Bhakti dapat dilayani.',
-        confidence: 100,
-        detectedArea: 'SMK Taruna Bhakti'
-      };
+      // Check if it includes class/room information
+      const hasClassInfo = /kelas|kls|class|xii|xi|x\s|ruang|room|r\.|lantai/.test(normalized);
+      const hasRoomNumber = /\d{3}|\d{2}|ruang\s*\d+|r\.\s*\d+/.test(normalized);
+      
+      if (hasClassInfo || hasRoomNumber) {
+        return {
+          isValid: true,
+          message: '✅ Alamat valid! Detail kelas/ruangan sudah lengkap untuk area TB.',
+          confidence: 100,
+          detectedArea: 'SMK Taruna Bhakti'
+        };
+      } else {
+        return {
+          isValid: true,
+          message: '✅ Alamat TB valid. Lebih baik sertakan kelas & ruangan untuk pengiriman lebih cepat.',
+          confidence: 85,
+          detectedArea: 'SMK Taruna Bhakti',
+          suggestions: ['Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti']
+        };
+      }
     }
   }
 
