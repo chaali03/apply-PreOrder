@@ -57,6 +57,29 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState<"TB" | "Luar TB">("TB");
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+
+  // Fetch pending orders count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const response = await fetch('/api/orders/pending-count');
+        const data = await response.json();
+        if (data.success) {
+          setPendingOrdersCount(data.count);
+        }
+      } catch (error) {
+        console.error('Error fetching pending orders count:', error);
+      }
+    };
+
+    fetchPendingCount();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch product detail (pakai runtime config dari /config.json)
   useEffect(() => {
@@ -176,15 +199,38 @@ export default function ProductDetailPage() {
         <nav>
           <Link href="/">Home</Link>
           <Link href="/menu">Menu</Link>
+          <Link href="/event">Event</Link>
           <Link href="/kurir">Kurir</Link>
           <Link href="/locations">Locations</Link>
         </nav>
-        <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px" }}>
-          <Link href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/login" prefetch={true}>
+          <button className="btn-cta hidden md:block" style={{ padding: "8px 16px", fontSize: "12px", marginLeft: "20px", position: "relative" }}>
             Login Admin
-          </Link>
-        </button>
-        <MobileMenu />
+            {pendingOrdersCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                background: '#ef4444',
+                color: 'white',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                border: '2px solid white',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                animation: 'pulse 2s infinite'
+              }}>
+                {pendingOrdersCount > 99 ? '99+' : pendingOrdersCount}
+              </span>
+            )}
+          </button>
+        </Link>
+        <MobileMenu pendingOrdersCount={pendingOrdersCount} />
       </header>
 
       <main>
