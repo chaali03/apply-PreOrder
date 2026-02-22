@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import MobileMenu from '../../components/ui/mobile-menu';
 import CurvedMenu from '../../components/ui/curved-menu';
+import { Spinner } from '../../components/ui/ios-spinner';
 import './kurir.css';
 
 interface OrderItem {
@@ -236,7 +237,7 @@ function KurirContent() {
                 minHeight: '400px',
                 gap: '16px'
               }}>
-                <Spinner size="large" />
+                <Spinner size="lg" />
                 <p style={{ 
                   fontSize: '16px', 
                   color: '#6b7280',

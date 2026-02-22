@@ -90,11 +90,11 @@ export default function DashboardMenuPage() {
   });
 
   const [availableDaysTB, setAvailableDaysTB] = useState<string[]>([
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
   ]);
   
   const [availableDaysLuarTB, setAvailableDaysLuarTB] = useState<string[]>([
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
   ]);
 
   const [variants, setVariants] = useState<ProductVariant[]>([
@@ -295,8 +295,8 @@ export default function DashboardMenuPage() {
       min_order_tb: 1,
       min_order_luar_tb: 1
     });
-    setAvailableDaysTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
-    setAvailableDaysLuarTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+    setAvailableDaysTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
+    setAvailableDaysLuarTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
     setVariants([
       { name: "", price: 0, stock: 100, is_available: true },
       { name: "", price: 0, stock: 100, is_available: true },
@@ -333,8 +333,8 @@ export default function DashboardMenuPage() {
     });
     
     // Load available days
-    setAvailableDaysTB(product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
-    setAvailableDaysLuarTB(product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+    setAvailableDaysTB(product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
+    setAvailableDaysLuarTB(product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
     // Load existing variants or create empty ones
     if (product.variants && product.variants.length > 0) {
       setVariants(product.variants);
@@ -895,8 +895,7 @@ export default function DashboardMenuPage() {
                         { value: 'wednesday', label: 'Rabu' },
                         { value: 'thursday', label: 'Kamis' },
                         { value: 'friday', label: 'Jumat' },
-                        { value: 'saturday', label: 'Sabtu' },
-                        { value: 'sunday', label: 'Minggu' }
+                        { value: 'saturday', label: 'Sabtu' }
                       ].map(day => (
                         <button
                           key={day.value}
@@ -953,8 +952,7 @@ export default function DashboardMenuPage() {
                         { value: 'wednesday', label: 'Rabu' },
                         { value: 'thursday', label: 'Kamis' },
                         { value: 'friday', label: 'Jumat' },
-                        { value: 'saturday', label: 'Sabtu' },
-                        { value: 'sunday', label: 'Minggu' }
+                        { value: 'saturday', label: 'Sabtu' }
                       ].map(day => (
                         <button
                           key={day.value}

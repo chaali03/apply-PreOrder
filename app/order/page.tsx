@@ -15,7 +15,8 @@ interface CartItem {
   min_order?: number;
   variant?: string | null;
   conditions?: ProductCondition[];
-  available_days?: string[];
+  available_days_tb?: string[];
+  available_days_luar_tb?: string[];
 }
 
 interface ProductCondition {
@@ -57,7 +58,8 @@ export default function OrderPage() {
         min_order: orderData.product.min_order || 1,
         variant: orderData.product.variant || null,
         conditions: Array.isArray(parsedConditions) ? parsedConditions : [],
-        available_days: orderData.product.available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        available_days_tb: orderData.product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+        available_days_luar_tb: orderData.product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
       }]);
     }
 
@@ -211,11 +213,17 @@ export default function OrderPage() {
     }
   };
 
-  // Helper function to get available days from cart items
+  // Helper function to get available days from cart items based on delivery location
   const getAvailableDays = (): string[] => {
     if (cartItems.length === 0) return [];
-    // Use available_days from first item (since we only have one product per order)
-    return cartItems[0].available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    // Use available_days based on delivery location
+    const item = cartItems[0];
+    if (customerInfo.deliveryLocation === 'TB') {
+      return item.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    } else {
+      return item.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    }
   };
 
   // Helper function to check if a date is available
@@ -349,6 +357,7 @@ export default function OrderPage() {
   } | null>(null);
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [showLocationOverride, setShowLocationOverride] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
@@ -426,6 +435,98 @@ export default function OrderPage() {
     }
   };
 
+  // Get current location
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setNotificationMessage('Browser Anda tidak mendukung geolocation');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
+
+    setGettingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Use Nominatim (OpenStreetMap) for reverse geocoding
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'ScaffFood-App'
+              }
+            }
+          );
+          
+          const data = await response.json();
+          
+          if (data && data.display_name) {
+            // Extract relevant address parts
+            const address = data.address;
+            let formattedAddress = '';
+            
+            if (address.road) formattedAddress += address.road;
+            if (address.suburb) formattedAddress += (formattedAddress ? ', ' : '') + address.suburb;
+            if (address.city || address.city_district) formattedAddress += (formattedAddress ? ', ' : '') + (address.city || address.city_district);
+            if (address.state) formattedAddress += (formattedAddress ? ', ' : '') + address.state;
+            
+            // Fallback to display_name if no structured address
+            if (!formattedAddress) {
+              formattedAddress = data.display_name;
+            }
+            
+            setCustomerInfo(prev => ({
+              ...prev,
+              address: formattedAddress
+            }));
+            
+            setNotificationMessage('Lokasi berhasil didapatkan');
+            setShowNotification(true);
+            setTimeout(() => setShowNotification(false), 3000);
+          } else {
+            throw new Error('Tidak dapat mendapatkan alamat');
+          }
+        } catch (error) {
+          console.error('Error getting address:', error);
+          setNotificationMessage('Gagal mendapatkan alamat dari koordinat');
+          setShowNotification(true);
+          setTimeout(() => setShowNotification(false), 3000);
+        } finally {
+          setGettingLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let errorMessage = 'Gagal mendapatkan lokasi';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Izin lokasi ditolak. Aktifkan izin lokasi di browser Anda.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Informasi lokasi tidak tersedia';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Waktu permintaan lokasi habis';
+            break;
+        }
+        
+        setNotificationMessage(errorMessage);
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   // Debounce address validation
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -436,6 +537,23 @@ export default function OrderPage() {
 
     return () => clearTimeout(timer);
   }, [customerInfo.address]);
+
+  // Reset delivery date when delivery location changes
+  useEffect(() => {
+    // Clear delivery date when location changes so user must select valid date for new location
+    if (deliveryDate) {
+      const selectedDate = new Date(deliveryDate);
+      const isStillAvailable = isDateAvailable(selectedDate);
+      
+      // If selected date is not available for new location, clear it
+      if (!isStillAvailable) {
+        setDeliveryDate('');
+        setNotificationMessage('Tanggal pengiriman direset. Pilih tanggal yang tersedia untuk lokasi ini.');
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      }
+    }
+  }, [customerInfo.deliveryLocation]);
 
   const handleCheckout = () => {
     if (customerInfo.name && customerInfo.phone && customerInfo.address && deliveryDate) {
@@ -769,7 +887,60 @@ export default function OrderPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Alamat Lengkap</label>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Alamat Lengkap</span>
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      disabled={gettingLocation}
+                      style={{
+                        padding: '6px 12px',
+                        background: gettingLocation ? '#d1d5db' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: gettingLocation ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!gettingLocation) {
+                          e.currentTarget.style.background = '#059669';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!gettingLocation) {
+                          e.currentTarget.style.background = '#10b981';
+                        }
+                      }}
+                    >
+                      {gettingLocation ? (
+                        <>
+                          <div style={{
+                            width: '12px',
+                            height: '12px',
+                            border: '2px solid white',
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                          }} />
+                          Mendapatkan...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                          </svg>
+                          Lokasi Terkini
+                        </>
+                      )}
+                    </button>
+                  </label>
                   <textarea
                     className="form-textarea"
                     placeholder="Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti"
