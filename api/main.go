@@ -999,11 +999,17 @@ func main() {
 			"min_order":             updateData.MinOrder,
 			"min_order_tb":          updateData.MinOrderTB,
 			"min_order_luar_tb":     updateData.MinOrderLuarTB,
-			"available_days_tb":     updateData.AvailableDaysTB,
-			"available_days_luar_tb": updateData.AvailableDaysLuarTB,
 			"conditions":            updateData.Conditions,
 			"addons":                updateData.Addons,
 			"qris_id":               updateData.QRISId, // This will be nil if not set
+		}
+		
+		// Handle array fields separately
+		if len(updateData.AvailableDaysTB) > 0 {
+			updateMap["available_days_tb"] = pq.Array(updateData.AvailableDaysTB)
+		}
+		if len(updateData.AvailableDaysLuarTB) > 0 {
+			updateMap["available_days_luar_tb"] = pq.Array(updateData.AvailableDaysLuarTB)
 		}
 		
 		result := DB.Model(&product).Updates(updateMap)
