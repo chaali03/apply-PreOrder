@@ -979,40 +979,32 @@ func main() {
 			requestData.Product.Addons = "[]"
 		}
 
-		// Update product fields
-		updateData := requestData.Product
+		// Update product fields directly on the loaded product
+		product.Name = updateData.Name
+		product.ShortDescription = updateData.ShortDescription
+		product.Description = updateData.Description
+		product.Price = updateData.Price
+		product.Category = updateData.Category
+		product.Tag = updateData.Tag
+		product.TagColor = updateData.TagColor
+		product.ImageURL1 = updateData.ImageURL1
+		product.ImageURL2 = updateData.ImageURL2
+		product.ImageURL3 = updateData.ImageURL3
+		product.Stock = updateData.Stock
+		product.IsAvailable = updateData.IsAvailable
+		product.MinOrder = updateData.MinOrder
+		product.MinOrderTB = updateData.MinOrderTB
+		product.MinOrderLuarTB = updateData.MinOrderLuarTB
+		product.AvailableDaysTB = updateData.AvailableDaysTB
+		product.AvailableDaysLuarTB = updateData.AvailableDaysLuarTB
+		product.Conditions = updateData.Conditions
+		product.Addons = updateData.Addons
+		product.QRISId = updateData.QRISId
 		
-		// Use map to allow NULL updates for qris_id
-		updateMap := map[string]interface{}{
-			"name":                  updateData.Name,
-			"short_description":     updateData.ShortDescription,
-			"description":           updateData.Description,
-			"price":                 updateData.Price,
-			"category":              updateData.Category,
-			"tag":                   updateData.Tag,
-			"tag_color":             updateData.TagColor,
-			"image_url_1":           updateData.ImageURL1,
-			"image_url_2":           updateData.ImageURL2,
-			"image_url_3":           updateData.ImageURL3,
-			"stock":                 updateData.Stock,
-			"is_available":          updateData.IsAvailable,
-			"min_order":             updateData.MinOrder,
-			"min_order_tb":          updateData.MinOrderTB,
-			"min_order_luar_tb":     updateData.MinOrderLuarTB,
-			"conditions":            updateData.Conditions,
-			"addons":                updateData.Addons,
-			"qris_id":               updateData.QRISId, // This will be nil if not set
-		}
+		log.Printf("📦 Saving product with MinOrderTB=%d, MinOrderLuarTB=%d", product.MinOrderTB, product.MinOrderLuarTB)
+		log.Printf("📦 AvailableDaysTB=%v, AvailableDaysLuarTB=%v", product.AvailableDaysTB, product.AvailableDaysLuarTB)
 		
-		// Handle array fields separately
-		if len(updateData.AvailableDaysTB) > 0 {
-			updateMap["available_days_tb"] = pq.Array(updateData.AvailableDaysTB)
-		}
-		if len(updateData.AvailableDaysLuarTB) > 0 {
-			updateMap["available_days_luar_tb"] = pq.Array(updateData.AvailableDaysLuarTB)
-		}
-		
-		result := DB.Model(&product).Updates(updateMap)
+		result := DB.Save(&product)
 		if result.Error != nil {
 			log.Printf("Error updating product: %v", result.Error)
 			return c.Status(500).JSON(fiber.Map{
@@ -1022,7 +1014,6 @@ func main() {
 		}
 		
 		log.Printf("✅ Updated %d rows", result.RowsAffected)
-		log.Printf("📦 Update map: %+v", updateMap)
 
 		// Handle variants update - always delete and recreate
 		// Delete existing variants first
