@@ -9,7 +9,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "SCAFF*FOOD — Pas di Lidah.",
   description:
-    "Serving 70s aesthetics with a modern twist. Locally sourced, highkey delicious, and strictly for the vibers.",
+    "Fokus rasa, enak, titik. Setiap menu disiapkan dengan bahan berkualitas dan perhatian pada detail untuk menghadirkan rasa yang pas di lidah.",
   generator: "v0.app",
   icons: {
     icon: [

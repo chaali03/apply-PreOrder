@@ -830,6 +830,7 @@ func main() {
 			Product
 			Variants   []ProductVariant        `json:"variants"`
 			Conditions []map[string]interface{} `json:"conditions"`
+			Addons     []map[string]interface{} `json:"addons"`
 		}
 		
 		if err := c.BodyParser(&requestData); err != nil {
@@ -847,6 +848,16 @@ func main() {
 			}
 		} else {
 			requestData.Product.Conditions = "[]"
+		}
+
+		// Convert addons array to JSON string
+		if len(requestData.Addons) > 0 {
+			addonsJSON, err := json.Marshal(requestData.Addons)
+			if err == nil {
+				requestData.Product.Addons = string(addonsJSON)
+			}
+		} else {
+			requestData.Product.Addons = "[]"
 		}
 
 		// Set default values
@@ -921,6 +932,7 @@ func main() {
 			Product
 			Variants   []ProductVariant        `json:"variants"`
 			Conditions []map[string]interface{} `json:"conditions"`
+			Addons     []map[string]interface{} `json:"addons"`
 		}
 		if err := c.BodyParser(&requestData); err != nil {
 			return c.Status(400).JSON(fiber.Map{
@@ -937,6 +949,16 @@ func main() {
 			}
 		} else {
 			requestData.Product.Conditions = "[]"
+		}
+
+		// Convert addons array to JSON string
+		if len(requestData.Addons) > 0 {
+			addonsJSON, err := json.Marshal(requestData.Addons)
+			if err == nil {
+				requestData.Product.Addons = string(addonsJSON)
+			}
+		} else {
+			requestData.Product.Addons = "[]"
 		}
 
 		// Update product fields
