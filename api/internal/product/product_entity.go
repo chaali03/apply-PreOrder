@@ -2,7 +2,7 @@ package product
 
 import "time"
 
-type type Product struct {
+type Product struct {
 	ID         string    `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	Name       string    `json:"name" gorm:"not null"`
 	Desc       string    `json:"desc"`

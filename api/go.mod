@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/gofiber/fiber/v2 v2.52.11
+	github.com/lib/pq v1.10.9
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )

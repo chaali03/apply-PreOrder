@@ -546,6 +546,24 @@ func main() {
 			"time":   time.Now().Format(time.RFC3339),
 		})
 	})
+	
+	// Test endpoint to check product columns
+	app.Get("/api/test/product-columns", func(c *fiber.Ctx) error {
+		var product Product
+		if err := DB.First(&product).Error; err != nil {
+			return c.JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(fiber.Map{
+			"name": product.Name,
+			"min_order": product.MinOrder,
+			"min_order_tb": product.MinOrderTB,
+			"min_order_luar_tb": product.MinOrderLuarTB,
+			"available_days_tb": product.AvailableDaysTB,
+			"available_days_luar_tb": product.AvailableDaysLuarTB,
+		})
+	})
 
 	// Upload image endpoint
 	app.Post("/api/upload", func(c *fiber.Ctx) error {
@@ -980,31 +998,79 @@ func main() {
 		}
 
 		// Update product fields directly on the loaded product
-		product.Name = updateData.Name
-		product.ShortDescription = updateData.ShortDescription
-		product.Description = updateData.Description
-		product.Price = updateData.Price
-		product.Category = updateData.Category
-		product.Tag = updateData.Tag
-		product.TagColor = updateData.TagColor
-		product.ImageURL1 = updateData.ImageURL1
-		product.ImageURL2 = updateData.ImageURL2
-		product.ImageURL3 = updateData.ImageURL3
-		product.Stock = updateData.Stock
-		product.IsAvailable = updateData.IsAvailable
-		product.MinOrder = updateData.MinOrder
-		product.MinOrderTB = updateData.MinOrderTB
-		product.MinOrderLuarTB = updateData.MinOrderLuarTB
-		product.AvailableDaysTB = updateData.AvailableDaysTB
-		product.AvailableDaysLuarTB = updateData.AvailableDaysLuarTB
-		product.Conditions = updateData.Conditions
-		product.Addons = updateData.Addons
-		product.QRISId = updateData.QRISId
+		product.Name = requestData.Name
+		product.ShortDescription = requestData.ShortDescription
+		product.Description = requestData.Description
+		product.Price = requestData.Price
+		product.Category = requestData.Category
+		product.Tag = requestData.Tag
+		product.TagColor = requestData.TagColor
+		product.ImageURL1 = requestData.ImageURL1
+		product.ImageURL2 = requestData.ImageURL2
+		product.ImageURL3 = requestData.ImageURL3
+		product.Stock = requestData.Stock
+		product.IsAvailable = requestData.IsAvailable
+		product.MinOrder = requestData.MinOrder
+		product.MinOrderTB = requestData.MinOrderTB
+		product.MinOrderLuarTB = requestData.MinOrderLuarTB
+		product.AvailableDaysTB = requestData.AvailableDaysTB
+		product.AvailableDaysLuarTB = requestData.AvailableDaysLuarTB
+		product.Conditions = requestData.Conditions
+		product.Addons = requestData.Addons
+		product.QRISId = requestData.QRISId
 		
 		log.Printf("📦 Saving product with MinOrderTB=%d, MinOrderLuarTB=%d", product.MinOrderTB, product.MinOrderLuarTB)
 		log.Printf("📦 AvailableDaysTB=%v, AvailableDaysLuarTB=%v", product.AvailableDaysTB, product.AvailableDaysLuarTB)
 		
-		result := DB.Save(&product)
+		// Use raw SQL to ensure columns are updated
+		result := DB.Exec(`
+			UPDATE products SET 
+				name = ?,
+				short_description = ?,
+				description = ?,
+				price = ?,
+				category = ?,
+				tag = ?,
+				tag_color = ?,
+				image_url_1 = ?,
+				image_url_2 = ?,
+				image_url_3 = ?,
+				stock = ?,
+				is_available = ?,
+				min_order = ?,
+				min_order_tb = ?,
+				min_order_luar_tb = ?,
+				available_days_tb = ?,
+				available_days_luar_tb = ?,
+				conditions = ?,
+				addons = ?,
+				qris_id = ?,
+				updated_at = NOW()
+			WHERE id = ?
+		`, 
+			product.Name,
+			product.ShortDescription,
+			product.Description,
+			product.Price,
+			product.Category,
+			product.Tag,
+			product.TagColor,
+			product.ImageURL1,
+			product.ImageURL2,
+			product.ImageURL3,
+			product.Stock,
+			product.IsAvailable,
+			product.MinOrder,
+			product.MinOrderTB,
+			product.MinOrderLuarTB,
+			pq.Array(product.AvailableDaysTB),
+			pq.Array(product.AvailableDaysLuarTB),
+			product.Conditions,
+			product.Addons,
+			product.QRISId,
+			id,
+		)
+		
 		if result.Error != nil {
 			log.Printf("Error updating product: %v", result.Error)
 			return c.Status(500).JSON(fiber.Map{
