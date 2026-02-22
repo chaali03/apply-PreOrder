@@ -343,8 +343,11 @@ export default function OrderPage() {
     confidence: number;
     detectedArea?: string;
     suggestions?: string[];
+    suggestedLocation?: "TB" | "Luar TB";
+    locationConfidence?: number;
   } | null>(null);
   const [validatingAddress, setValidatingAddress] = useState(false);
+  const [showLocationOverride, setShowLocationOverride] = useState(false);
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
@@ -406,6 +409,14 @@ export default function OrderPage() {
       
       if (data.success) {
         setAddressValidation(data.data);
+        
+        // Auto-update delivery location based on AI suggestion if confidence is high
+        if (data.data.suggestedLocation && data.data.locationConfidence >= 85 && !showLocationOverride) {
+          setCustomerInfo(prev => ({
+            ...prev,
+            deliveryLocation: data.data.suggestedLocation
+          }));
+        }
       }
     } catch (error) {
       console.error('Error validating address:', error);
@@ -882,6 +893,140 @@ export default function OrderPage() {
                           )}
                         </div>
                       </div>
+                      
+                      {/* AI Location Suggestion with Override Option */}
+                      {addressValidation.suggestedLocation && addressValidation.locationConfidence && (
+                        <div style={{
+                          marginTop: '16px',
+                          paddingTop: '16px',
+                          borderTop: `2px solid ${addressValidation.isValid ? '#86efac' : '#fca5a5'}`
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <div>
+                              <p style={{ 
+                                margin: 0, 
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#374151'
+                              }}>
+                                🤖 AI mendeteksi lokasi pengiriman:
+                              </p>
+                              <p style={{ 
+                                margin: '4px 0 0 0', 
+                                fontSize: '16px',
+                                fontWeight: 700,
+                                color: addressValidation.suggestedLocation === 'TB' ? '#2563eb' : '#7c3aed'
+                              }}>
+                                {addressValidation.suggestedLocation === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                              </p>
+                              <p style={{ 
+                                margin: '2px 0 0 0', 
+                                fontSize: '11px',
+                                color: '#6b7280'
+                              }}>
+                                Confidence: {addressValidation.locationConfidence}%
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowLocationOverride(!showLocationOverride)}
+                              style={{
+                                padding: '8px 16px',
+                                background: '#f3f4f6',
+                                border: '2px solid #d1d5db',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#374151',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#e5e7eb';
+                                e.currentTarget.style.borderColor = '#9ca3af';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#f3f4f6';
+                                e.currentTarget.style.borderColor = '#d1d5db';
+                              }}
+                            >
+                              {showLocationOverride ? 'Tutup' : 'Ganti Lokasi'}
+                            </button>
+                          </div>
+                          
+                          {/* Location Override Options */}
+                          {showLocationOverride && (
+                            <div style={{
+                              marginTop: '12px',
+                              padding: '16px',
+                              background: '#fef3c7',
+                              border: '2px solid #fbbf24',
+                              borderRadius: '8px'
+                            }}>
+                              <p style={{ 
+                                margin: '0 0 12px 0', 
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#92400e'
+                              }}>
+                                ⚠️ Pilih lokasi pengiriman yang benar:
+                              </p>
+                              <div style={{ display: 'flex', gap: '12px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomerInfo({...customerInfo, deliveryLocation: 'TB'});
+                                    setShowLocationOverride(false);
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: customerInfo.deliveryLocation === 'TB' ? '#2563eb' : 'white',
+                                    border: '2px solid #2563eb',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 700,
+                                    color: customerInfo.deliveryLocation === 'TB' ? 'white' : '#2563eb',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  Dalam TB
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomerInfo({...customerInfo, deliveryLocation: 'Luar TB'});
+                                    setShowLocationOverride(false);
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: customerInfo.deliveryLocation === 'Luar TB' ? '#7c3aed' : 'white',
+                                    border: '2px solid #7c3aed',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 700,
+                                    color: customerInfo.deliveryLocation === 'Luar TB' ? 'white' : '#7c3aed',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  Luar TB
+                                </button>
+                              </div>
+                              <p style={{ 
+                                margin: '12px 0 0 0', 
+                                fontSize: '11px',
+                                color: '#92400e',
+                                textAlign: 'center'
+                              }}>
+                                Pastikan pilihan sesuai dengan alamat Anda
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

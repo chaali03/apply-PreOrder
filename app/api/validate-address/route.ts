@@ -33,6 +33,8 @@ interface ValidationResult {
   confidence: number;
   detectedArea?: string;
   suggestions?: string[];
+  suggestedLocation?: "TB" | "Luar TB";  // AI suggestion for delivery location
+  locationConfidence?: number;  // Confidence level for location detection
 }
 
 function validateAddressWithAI(address: string): ValidationResult {
@@ -80,7 +82,9 @@ function validateAddressWithAI(address: string): ValidationResult {
           isValid: true,
           message: '✅ Alamat valid! Detail kelas/ruangan sudah lengkap untuk area TB.',
           confidence: 100,
-          detectedArea: 'SMK Taruna Bhakti'
+          detectedArea: 'SMK Taruna Bhakti',
+          suggestedLocation: 'TB',
+          locationConfidence: 100
         };
       } else {
         return {
@@ -88,7 +92,9 @@ function validateAddressWithAI(address: string): ValidationResult {
           message: '✅ Alamat TB valid. Lebih baik sertakan kelas & ruangan untuk pengiriman lebih cepat.',
           confidence: 85,
           detectedArea: 'SMK Taruna Bhakti',
-          suggestions: ['Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti']
+          suggestions: ['Contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti'],
+          suggestedLocation: 'TB',
+          locationConfidence: 95
         };
       }
     }
@@ -101,7 +107,9 @@ function validateAddressWithAI(address: string): ValidationResult {
         isValid: true,
         message: '✅ Alamat valid! Area Gas Alam Depok dapat dilayani.',
         confidence: 95,
-        detectedArea: 'Gas Alam Depok'
+        detectedArea: 'Gas Alam Depok',
+        suggestedLocation: 'Luar TB',
+        locationConfidence: 95
       };
     }
   }
@@ -140,7 +148,9 @@ function validateAddressWithAI(address: string): ValidationResult {
         isValid: true,
         message: `✅ Alamat valid! Area ${foundCimangis ? 'Cimangis' : 'Pekapuran'}, Depok dapat dilayani.`,
         confidence: 95,
-        detectedArea: foundCimangis ? 'Cimangis, Depok' : 'Pekapuran, Depok'
+        detectedArea: foundCimangis ? 'Cimangis, Depok' : 'Pekapuran, Depok',
+        suggestedLocation: 'Luar TB',
+        locationConfidence: 90
       };
     } else {
       // Found area but no Depok mention - still allow but with lower confidence
@@ -149,7 +159,9 @@ function validateAddressWithAI(address: string): ValidationResult {
         message: `✅ Alamat valid! Area ${foundCimangis ? 'Cimangis' : 'Pekapuran'} dapat dilayani.`,
         confidence: 85,
         detectedArea: foundCimangis ? 'Cimangis' : 'Pekapuran',
-        suggestions: ['Pastikan alamat berada di wilayah Depok']
+        suggestions: ['Pastikan alamat berada di wilayah Depok'],
+        suggestedLocation: 'Luar TB',
+        locationConfidence: 85
       };
     }
   }

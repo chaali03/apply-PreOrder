@@ -593,7 +593,7 @@ export default function DashboardOrdersPage() {
                             display: 'inline-block',
                             width: 'fit-content'
                           }}>
-                            📍 {order.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                            {order.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
                           </span>
                         )}
                       </div>
@@ -903,7 +903,7 @@ export default function DashboardOrdersPage() {
                           borderRadius: '4px',
                           fontWeight: 600
                         }}>
-                          📍 {orderToComplete.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                           {orderToComplete.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
                         </span>
                       )}
                     </span>

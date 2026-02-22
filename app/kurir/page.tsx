@@ -320,7 +320,7 @@ function KurirContent() {
                               display: 'inline-block',
                               width: 'fit-content'
                             }}>
-                              📍 {order.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
+                              {order.delivery_location === 'TB' ? 'Dalam TB' : 'Luar TB'}
                             </span>
                           )}
                         </div>

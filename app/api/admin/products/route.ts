@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = 'https://api.scafffood.my.id';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const targetUrl = `${backendUrl}/api/admin/products`;
     
     console.log(`[Proxy] GET ${targetUrl}`);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const backendUrl = 'https://api.scafffood.my.id';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const targetUrl = `${backendUrl}/api/admin/products`;
     
     const body = await request.json();
