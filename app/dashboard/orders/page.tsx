@@ -1028,8 +1028,40 @@ export default function DashboardOrdersPage() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="modal-content"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto' }}
+              style={{ maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', position: 'relative' }}
             >
+              <button
+                onClick={() => setShowPaymentProofModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  background: '#fff',
+                  border: '2px solid #000',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  zIndex: 10,
+                  boxShadow: '2px 2px 0 rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.boxShadow = '3px 3px 0 rgba(0,0,0,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 rgba(0,0,0,0.2)';
+                }}
+              >
+                ×
+              </button>
               <h2 className="modal-title">Bukti Pembayaran</h2>
               <div style={{ 
                 display: 'flex', 
