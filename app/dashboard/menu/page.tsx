@@ -21,6 +21,10 @@ interface Product {
   stock: number;
   is_available: boolean;
   min_order: number;
+  min_order_tb?: number;
+  min_order_luar_tb?: number;
+  available_days_tb?: string[];
+  available_days_luar_tb?: string[];
   variants?: ProductVariant[];
   conditions?: ProductCondition[];
   addons?: ProductAddon[];
@@ -80,8 +84,18 @@ export default function DashboardMenuPage() {
     image_url_2: "",
     image_url_3: "",
     is_available: true,
-    min_order: 1
+    min_order: 1,
+    min_order_tb: 1,
+    min_order_luar_tb: 1
   });
+
+  const [availableDaysTB, setAvailableDaysTB] = useState<string[]>([
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+  ]);
+  
+  const [availableDaysLuarTB, setAvailableDaysLuarTB] = useState<string[]>([
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+  ]);
 
   const [variants, setVariants] = useState<ProductVariant[]>([
     { name: "", price: 0, stock: 100, is_available: true },
@@ -277,8 +291,12 @@ export default function DashboardMenuPage() {
       image_url_2: "",
       image_url_3: "",
       is_available: true,
-      min_order: 1
+      min_order: 1,
+      min_order_tb: 1,
+      min_order_luar_tb: 1
     });
+    setAvailableDaysTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+    setAvailableDaysLuarTB(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
     setVariants([
       { name: "", price: 0, stock: 100, is_available: true },
       { name: "", price: 0, stock: 100, is_available: true },
@@ -309,8 +327,14 @@ export default function DashboardMenuPage() {
       image_url_2: product.image_url_2,
       image_url_3: product.image_url_3,
       is_available: product.is_available,
-      min_order: product.min_order || 1
+      min_order: product.min_order || 1,
+      min_order_tb: product.min_order_tb || 1,
+      min_order_luar_tb: product.min_order_luar_tb || 1
     });
+    
+    // Load available days
+    setAvailableDaysTB(product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+    setAvailableDaysLuarTB(product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
     // Load existing variants or create empty ones
     if (product.variants && product.variants.length > 0) {
       setVariants(product.variants);
@@ -387,6 +411,8 @@ export default function DashboardMenuPage() {
     console.log('Submitting variants:', validVariants);
     console.log('Submitting conditions:', validConditions);
     console.log('Submitting addons:', validAddons);
+    console.log('Submitting available days TB:', availableDaysTB);
+    console.log('Submitting available days Luar TB:', availableDaysLuarTB);
     
     const url = modalMode === "add" 
       ? `/api/admin/products`
@@ -398,7 +424,9 @@ export default function DashboardMenuPage() {
       ...formData,
       variants: validVariants,
       conditions: validConditions,
-      addons: validAddons
+      addons: validAddons,
+      available_days_tb: availableDaysTB,
+      available_days_luar_tb: availableDaysLuarTB
     };
     
     // Only add qris_id if it has a valid value, otherwise explicitly set to null
@@ -817,7 +845,7 @@ export default function DashboardMenuPage() {
                   </div>
 
                   <div className="form-group">
-                    <label>Minimal Order *</label>
+                    <label>Minimal Order (Default) *</label>
                     <input
                       type="number"
                       required
@@ -827,7 +855,123 @@ export default function DashboardMenuPage() {
                       placeholder="1"
                     />
                     <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Jumlah minimal yang harus dipesan customer
+                      Jumlah minimal default untuk semua lokasi
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Minimal Order Dalam TB *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={formData.min_order_tb}
+                      onChange={(e) => setFormData({...formData, min_order_tb: Math.max(1, Number(e.target.value))})}
+                      placeholder="1"
+                    />
+                    <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Minimal order untuk pengiriman dalam TB
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Hari Tersedia Dalam TB *</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {[
+                        { value: 'monday', label: 'Senin' },
+                        { value: 'tuesday', label: 'Selasa' },
+                        { value: 'wednesday', label: 'Rabu' },
+                        { value: 'thursday', label: 'Kamis' },
+                        { value: 'friday', label: 'Jumat' },
+                        { value: 'saturday', label: 'Sabtu' },
+                        { value: 'sunday', label: 'Minggu' }
+                      ].map(day => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => {
+                            if (availableDaysTB.includes(day.value)) {
+                              setAvailableDaysTB(availableDaysTB.filter(d => d !== day.value));
+                            } else {
+                              setAvailableDaysTB([...availableDaysTB, day.value]);
+                            }
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            border: availableDaysTB.includes(day.value) ? '2px solid #FF6B35' : '2px solid #d1d5db',
+                            borderRadius: '6px',
+                            background: availableDaysTB.includes(day.value) ? '#FFF5F2' : 'white',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: availableDaysTB.includes(day.value) ? 600 : 400,
+                            color: availableDaysTB.includes(day.value) ? '#FF6B35' : '#374151',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                    <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Pilih hari-hari produk tersedia untuk pengiriman dalam TB
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Minimal Order Luar TB *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={formData.min_order_luar_tb}
+                      onChange={(e) => setFormData({...formData, min_order_luar_tb: Math.max(1, Number(e.target.value))})}
+                      placeholder="1"
+                    />
+                    <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Minimal order untuk pengiriman luar TB
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Hari Tersedia Luar TB *</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {[
+                        { value: 'monday', label: 'Senin' },
+                        { value: 'tuesday', label: 'Selasa' },
+                        { value: 'wednesday', label: 'Rabu' },
+                        { value: 'thursday', label: 'Kamis' },
+                        { value: 'friday', label: 'Jumat' },
+                        { value: 'saturday', label: 'Sabtu' },
+                        { value: 'sunday', label: 'Minggu' }
+                      ].map(day => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => {
+                            if (availableDaysLuarTB.includes(day.value)) {
+                              setAvailableDaysLuarTB(availableDaysLuarTB.filter(d => d !== day.value));
+                            } else {
+                              setAvailableDaysLuarTB([...availableDaysLuarTB, day.value]);
+                            }
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            border: availableDaysLuarTB.includes(day.value) ? '2px solid #FF6B35' : '2px solid #d1d5db',
+                            borderRadius: '6px',
+                            background: availableDaysLuarTB.includes(day.value) ? '#FFF5F2' : 'white',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: availableDaysLuarTB.includes(day.value) ? 600 : 400,
+                            color: availableDaysLuarTB.includes(day.value) ? '#FF6B35' : '#374151',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                    <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Pilih hari-hari produk tersedia untuk pengiriman luar TB
                     </small>
                   </div>
                 </div>

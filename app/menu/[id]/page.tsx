@@ -38,6 +38,10 @@ interface Product {
   stock: number;
   is_available: boolean;
   min_order: number;
+  min_order_tb?: number;
+  min_order_luar_tb?: number;
+  available_days_tb?: string[];
+  available_days_luar_tb?: string[];
   variants?: ProductVariant[];
   conditions?: ProductCondition[];
 }
@@ -52,6 +56,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [deliveryLocation, setDeliveryLocation] = useState<"TB" | "Luar TB">("TB");
 
   // Fetch product detail (pakai runtime config dari /config.json)
   useEffect(() => {
@@ -70,7 +75,10 @@ export default function ProductDetailPage() {
   // Update quantity and variant when product changes (for navigation between products)
   useEffect(() => {
     if (product) {
-      const minOrder = product.min_order || 1;
+      // Use location-specific min order
+      const minOrder = deliveryLocation === "TB" 
+        ? (product.min_order_tb || product.min_order || 1)
+        : (product.min_order_luar_tb || product.min_order || 1);
       setQuantity(minOrder);
       // Reset variant selection, auto-select first available variant if exists
       if (product.variants && product.variants.length > 0) {
@@ -83,7 +91,7 @@ export default function ProductDetailPage() {
         setSelectedVariant(null);
       }
     }
-  }, [product?.id, product?.min_order, product?.variants]);
+  }, [product?.id, product?.min_order, product?.min_order_tb, product?.min_order_luar_tb, product?.variants, deliveryLocation]);
 
   // Fetch related products
   useEffect(() => {
@@ -285,14 +293,101 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
+              {/* Delivery Location Selector */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', fontSize: '15px' }}>
+                  Pilih Lokasi Pengiriman:
+                </label>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryLocation("TB")}
+                    style={{
+                      flex: '1',
+                      minWidth: '140px',
+                      padding: '14px',
+                      border: deliveryLocation === "TB" ? '3px solid #FF6B35' : '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      background: deliveryLocation === "TB" ? '#FFF5F2' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={deliveryLocation === "TB" ? "#FF6B35" : "#6b7280"} strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <div style={{ 
+                      fontWeight: deliveryLocation === "TB" ? 700 : 500,
+                      color: deliveryLocation === "TB" ? "#FF6B35" : "#374151",
+                      fontSize: '15px'
+                    }}>
+                      Dalam TB
+                    </div>
+                    <small style={{ color: '#6b7280', fontSize: '11px', textAlign: 'center' }}>
+                      Min. {product.min_order_tb || product.min_order || 1} pcs
+                    </small>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryLocation("Luar TB")}
+                    style={{
+                      flex: '1',
+                      minWidth: '140px',
+                      padding: '14px',
+                      border: deliveryLocation === "Luar TB" ? '3px solid #FF6B35' : '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      background: deliveryLocation === "Luar TB" ? '#FFF5F2' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={deliveryLocation === "Luar TB" ? "#FF6B35" : "#6b7280"} strokeWidth="2">
+                      <circle cx="12" cy="10" r="3"></circle>
+                      <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
+                    </svg>
+                    <div style={{ 
+                      fontWeight: deliveryLocation === "Luar TB" ? 700 : 500,
+                      color: deliveryLocation === "Luar TB" ? "#FF6B35" : "#374151",
+                      fontSize: '15px'
+                    }}>
+                      Luar TB
+                    </div>
+                    <small style={{ color: '#6b7280', fontSize: '11px', textAlign: 'center' }}>
+                      Min. {product.min_order_luar_tb || product.min_order || 1} pcs
+                    </small>
+                  </button>
+                </div>
+              </div>
+
               {/* Quantity Selector */}
               <div className="quantity-section">
                 <label>Jumlah:</label>
                 <div className="quantity-controls">
                   <button 
-                    onClick={() => setQuantity(Math.max(product.min_order || 1, quantity - 1))}
+                    onClick={() => {
+                      const minOrder = deliveryLocation === "TB" 
+                        ? (product.min_order_tb || product.min_order || 1)
+                        : (product.min_order_luar_tb || product.min_order || 1);
+                      setQuantity(Math.max(minOrder, quantity - 1));
+                    }}
                     className="quantity-btn"
-                    disabled={quantity <= (product.min_order || 1)}
+                    disabled={quantity <= (deliveryLocation === "TB" 
+                      ? (product.min_order_tb || product.min_order || 1)
+                      : (product.min_order_luar_tb || product.min_order || 1))}
                   >
                     -
                   </button>
@@ -304,9 +399,11 @@ export default function ProductDetailPage() {
                     +
                   </button>
                 </div>
-                {product.min_order > 1 && (
+                {((deliveryLocation === "TB" ? product.min_order_tb : product.min_order_luar_tb) || product.min_order) > 1 && (
                   <small style={{ color: '#666', fontSize: '13px', marginLeft: '10px' }}>
-                    Min. order: {product.min_order} pcs
+                    Min. order: {deliveryLocation === "TB" 
+                      ? (product.min_order_tb || product.min_order || 1)
+                      : (product.min_order_luar_tb || product.min_order || 1)} pcs
                   </small>
                 )}
               </div>
@@ -321,6 +418,9 @@ export default function ProductDetailPage() {
               <button 
                 className="detail-order-btn"
                 onClick={() => {
+                  // Save delivery location to localStorage
+                  localStorage.setItem('customerDeliveryLocation', deliveryLocation);
+                  
                   // Save order data to localStorage
                   const orderData = {
                     product: {
@@ -329,12 +429,18 @@ export default function ProductDetailPage() {
                       price: currentPrice,
                       image: getImageUrl(product.image_url_1),
                       category: product.category,
-                      min_order: product.min_order || 1,
+                      min_order: deliveryLocation === "TB" 
+                        ? (product.min_order_tb || product.min_order || 1)
+                        : (product.min_order_luar_tb || product.min_order || 1),
                       variant: selectedVariant ? selectedVariant.name : null,
-                      conditions: product.conditions || []
+                      conditions: product.conditions || [],
+                      available_days: deliveryLocation === "TB"
+                        ? (product.available_days_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+                        : (product.available_days_luar_tb || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
                     },
                     quantity: quantity,
-                    total: totalPrice
+                    total: totalPrice,
+                    deliveryLocation: deliveryLocation
                   };
                   localStorage.setItem('orderData', JSON.stringify(orderData));
                   // Navigate to order page

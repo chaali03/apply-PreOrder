@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+	"github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -36,26 +37,30 @@ type User struct {
 
 // Product model
 type Product struct {
-	ID               string           `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	Name             string           `gorm:"not null" json:"name"`
-	ShortDescription string           `json:"short_description"`
-	Description      string           `json:"description"`
-	Price            float64          `gorm:"not null" json:"price"`
-	Category         string           `json:"category"`
-	Tag              string           `json:"tag"`
-	TagColor         string           `json:"tag_color"`
-	ImageURL1        string           `gorm:"column:image_url_1" json:"image_url_1"`
-	ImageURL2        string           `gorm:"column:image_url_2" json:"image_url_2"`
-	ImageURL3        string           `gorm:"column:image_url_3" json:"image_url_3"`
-	Stock            int              `gorm:"default:0" json:"stock"`
-	IsAvailable      bool             `gorm:"default:true" json:"is_available"`
-	MinOrder         int              `gorm:"default:1" json:"min_order"`
-	Conditions       string           `gorm:"type:jsonb;default:'[]'" json:"conditions,omitempty"`
-	Addons           string           `gorm:"type:jsonb;default:'[]'" json:"addons,omitempty"`
-	QRISId           *string          `gorm:"type:uuid" json:"qris_id,omitempty"`
-	Variants         []ProductVariant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
-	CreatedAt        time.Time        `json:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at"`
+	ID                 string           `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	Name               string           `gorm:"not null" json:"name"`
+	ShortDescription   string           `json:"short_description"`
+	Description        string           `json:"description"`
+	Price              float64          `gorm:"not null" json:"price"`
+	Category           string           `json:"category"`
+	Tag                string           `json:"tag"`
+	TagColor           string           `json:"tag_color"`
+	ImageURL1          string           `gorm:"column:image_url_1" json:"image_url_1"`
+	ImageURL2          string           `gorm:"column:image_url_2" json:"image_url_2"`
+	ImageURL3          string           `gorm:"column:image_url_3" json:"image_url_3"`
+	Stock              int              `gorm:"default:0" json:"stock"`
+	IsAvailable        bool             `gorm:"default:true" json:"is_available"`
+	MinOrder           int              `gorm:"default:1" json:"min_order"`
+	MinOrderTB         int              `gorm:"default:1" json:"min_order_tb"`
+	MinOrderLuarTB     int              `gorm:"default:1" json:"min_order_luar_tb"`
+	AvailableDaysTB    pq.StringArray   `gorm:"type:text[]" json:"available_days_tb"`
+	AvailableDaysLuarTB pq.StringArray  `gorm:"type:text[]" json:"available_days_luar_tb"`
+	Conditions         string           `gorm:"type:jsonb;default:'[]'" json:"conditions,omitempty"`
+	Addons             string           `gorm:"type:jsonb;default:'[]'" json:"addons,omitempty"`
+	QRISId             *string          `gorm:"type:uuid" json:"qris_id,omitempty"`
+	Variants           []ProductVariant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
+	CreatedAt          time.Time        `json:"created_at"`
+	UpdatedAt          time.Time        `json:"updated_at"`
 }
 
 // ProductVariant model
@@ -121,6 +126,7 @@ type Order struct {
 	CustomerPhone        string     `gorm:"not null" json:"customer_phone"`
 	DeliveryAddress      string     `json:"delivery_address"`
 	DeliveryLocation     string     `gorm:"default:'TB'" json:"delivery_location"`
+	DeliveryDate         *time.Time `gorm:"type:date" json:"delivery_date,omitempty"`
 	Subtotal             float64    `json:"subtotal"`
 	DeliveryFee          float64    `json:"delivery_fee"`
 	Total                float64    `json:"total"`

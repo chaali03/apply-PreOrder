@@ -15,6 +15,7 @@ interface CartItem {
   min_order?: number;
   variant?: string | null;
   conditions?: ProductCondition[];
+  available_days?: string[];
 }
 
 interface ProductCondition {
@@ -55,7 +56,8 @@ export default function OrderPage() {
         category: orderData.product.category,
         min_order: orderData.product.min_order || 1,
         variant: orderData.product.variant || null,
-        conditions: Array.isArray(parsedConditions) ? parsedConditions : []
+        conditions: Array.isArray(parsedConditions) ? parsedConditions : [],
+        available_days: orderData.product.available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
       }]);
     }
 
@@ -84,7 +86,8 @@ export default function OrderPage() {
     deliveryLocation: "TB" as "TB" | "Luar TB"
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"qris">("qris");
+  const [deliveryDate, setDeliveryDate] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"qris" | "cod">("qris");
   const [paymentProof, setPaymentProof] = useState<string>("");
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
@@ -206,6 +209,65 @@ export default function OrderPage() {
       // Fallback: open in new tab
       window.open(qrCodeUrl, '_blank');
     }
+  };
+
+  // Helper function to get available days from cart items
+  const getAvailableDays = (): string[] => {
+    if (cartItems.length === 0) return [];
+    // Use available_days from first item (since we only have one product per order)
+    return cartItems[0].available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  };
+
+  // Helper function to check if a date is available
+  const isDateAvailable = (date: Date): boolean => {
+    const availableDays = getAvailableDays();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    return availableDays.includes(dayName);
+  };
+
+  // Helper function to get next available date
+  const getNextAvailableDate = (startDate: Date = new Date()): Date => {
+    const date = new Date(startDate);
+    date.setHours(0, 0, 0, 0);
+    
+    // Start from tomorrow
+    date.setDate(date.getDate() + 1);
+    
+    // Find next available day (max 30 days ahead)
+    for (let i = 0; i < 30; i++) {
+      if (isDateAvailable(date)) {
+        return date;
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    
+    // If no available date found, return tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  };
+
+  // Format date for input[type="date"]
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Get min date (tomorrow)
+  const getMinDate = (): string => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return formatDateForInput(tomorrow);
+  };
+
+  // Get max date (30 days from now)
+  const getMaxDate = (): string => {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 30);
+    return formatDateForInput(maxDate);
   };
 
   const handlePaymentProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,7 +426,7 @@ export default function OrderPage() {
   }, [customerInfo.address]);
 
   const handleCheckout = () => {
-    if (customerInfo.name && customerInfo.phone && customerInfo.address) {
+    if (customerInfo.name && customerInfo.phone && customerInfo.address && deliveryDate) {
       // Check address validation
       if (!addressValidation || !addressValidation.isValid) {
         setNotificationMessage("Alamat pengiriman tidak valid atau di luar area layanan");
@@ -373,35 +435,47 @@ export default function OrderPage() {
         return;
       }
       
+      // Validate delivery date
+      const selectedDate = new Date(deliveryDate);
+      if (!isDateAvailable(selectedDate)) {
+        setNotificationMessage("Tanggal pengiriman tidak tersedia untuk produk ini");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        return;
+      }
+      
       setStep("payment");
     } else {
-      setNotificationMessage("Mohon lengkapi semua data pengiriman");
+      setNotificationMessage("Mohon lengkapi semua data pengiriman termasuk tanggal pengiriman");
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
     }
   };
 
   const handlePayment = async () => {
-    if (!paymentProof) {
-      setNotificationMessage("Mohon upload bukti pembayaran");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-      return;
-    }
+    // Validate payment proof only for QRIS
+    if (paymentMethod === "qris") {
+      if (!paymentProof) {
+        setNotificationMessage("Mohon upload bukti pembayaran");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        return;
+      }
 
-    if (!verificationResult || !verificationResult.isValid) {
-      setNotificationMessage("Bukti pembayaran tidak valid atau belum diverifikasi");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-      return;
+      if (!verificationResult || !verificationResult.isValid) {
+        setNotificationMessage("Bukti pembayaran tidak valid atau belum diverifikasi");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        return;
+      }
     }
 
     setSubmitting(true);
     
     try {
-      // Upload payment proof first if exists
+      // Upload payment proof first if exists (only for QRIS)
       let paymentProofUrl = "";
-      if (paymentProof) {
+      if (paymentMethod === "qris" && paymentProof) {
         try {
           // Convert base64 to blob
           const base64Response = await fetch(paymentProof);
@@ -434,11 +508,12 @@ export default function OrderPage() {
           customer_phone: customerInfo.phone,
           delivery_address: customerInfo.address,
           delivery_location: customerInfo.deliveryLocation,
+          delivery_date: deliveryDate || null,
           subtotal: subtotal,
           delivery_fee: 0,
           total: total,
-          payment_method: "qris",
-          payment_status: "paid",
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === "cod" ? "pending" : "paid",
           payment_proof: paymentProofUrl,
           order_status: "processing"
         },
@@ -666,7 +741,10 @@ export default function OrderPage() {
                     onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                   />
                   <p className="form-hint">
-                    Untuk SMK TB: Sebutkan kelas & ruangan (contoh: Kelas XII RPL 4, Ruang 304). Untuk luar TB: Alamat lengkap dengan RT/RW
+                    {customerInfo.deliveryLocation === "TB" 
+                      ? "Untuk dalam TB: Sebutkan kelas & ruangan (contoh: Kelas XII RPL 4, Ruang 304, SMK Taruna Bhakti)"
+                      : "Untuk luar TB: Alamat lengkap dengan RT/RW di area Cimangis, Pekapuran, atau Gas Alam Depok"
+                    }
                   </p>
                   
                   {/* AI Address Validation Result */}
@@ -808,86 +886,93 @@ export default function OrderPage() {
                   )}
                 </div>
 
-                {/* Delivery Location Selection */}
+                {/* Display selected delivery location (read-only) */}
                 <div className="form-group" style={{ 
                   marginTop: '20px', 
-                  padding: '20px', 
+                  padding: '16px', 
                   background: '#f0fdf4', 
                   border: '2px solid #10b981',
                   borderRadius: '8px'
                 }}>
-                  <label className="form-label" style={{ marginBottom: '12px', display: 'block' }}>
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '14px' }}>
                     Lokasi Pengiriman
                   </label>
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: "TB"})}
-                      style={{
-                        flex: '1',
-                        minWidth: '150px',
-                        padding: '16px',
-                        border: customerInfo.deliveryLocation === "TB" ? '3px solid #10b981' : '2px solid #d1d5db',
-                        borderRadius: '8px',
-                        background: customerInfo.deliveryLocation === "TB" ? '#f0fdf4' : 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={customerInfo.deliveryLocation === "TB" ? "#10b981" : "#6b7280"} strokeWidth="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                      </svg>
-                      <div style={{ 
-                        fontWeight: customerInfo.deliveryLocation === "TB" ? 700 : 500,
-                        color: customerInfo.deliveryLocation === "TB" ? "#10b981" : "#374151",
-                        fontSize: '16px'
-                      }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: '#10b981'
+                  }}>
+                    {customerInfo.deliveryLocation === "TB" ? (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
                         Dalam TB
-                      </div>
-                      <small style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center' }}>
-                        Pengiriman di dalam area TB
-                      </small>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: "Luar TB"})}
-                      style={{
-                        flex: '1',
-                        minWidth: '150px',
-                        padding: '16px',
-                        border: customerInfo.deliveryLocation === "Luar TB" ? '3px solid #10b981' : '2px solid #d1d5db',
-                        borderRadius: '8px',
-                        background: customerInfo.deliveryLocation === "Luar TB" ? '#f0fdf4' : 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={customerInfo.deliveryLocation === "Luar TB" ? "#10b981" : "#6b7280"} strokeWidth="2">
-                        <circle cx="12" cy="10" r="3"></circle>
-                        <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
-                      </svg>
-                      <div style={{ 
-                        fontWeight: customerInfo.deliveryLocation === "Luar TB" ? 700 : 500,
-                        color: customerInfo.deliveryLocation === "Luar TB" ? "#10b981" : "#374151",
-                        fontSize: '16px'
-                      }}>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                          <circle cx="12" cy="10" r="3"></circle>
+                          <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
+                        </svg>
                         Luar TB
-                      </div>
-                      <small style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center' }}>
-                        Pengiriman di luar area TB
-                      </small>
-                    </button>
+                      </>
+                    )}
                   </div>
+                  <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    Lokasi dipilih dari halaman produk. Alamat harus sesuai dengan lokasi ini.
+                  </small>
+                </div>
+
+                {/* Delivery Date Picker */}
+                <div className="form-group">
+                  <label className="form-label">Estimasi Tanggal Pengiriman *</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    required
+                    value={deliveryDate}
+                    min={getMinDate()}
+                    max={getMaxDate()}
+                    onChange={(e) => {
+                      const selectedDate = new Date(e.target.value);
+                      if (isDateAvailable(selectedDate)) {
+                        setDeliveryDate(e.target.value);
+                      } else {
+                        setNotificationMessage('Hari yang dipilih tidak tersedia untuk produk ini');
+                        setShowNotification(true);
+                        setTimeout(() => setShowNotification(false), 3000);
+                        // Set to next available date
+                        const nextDate = getNextAvailableDate(selectedDate);
+                        setDeliveryDate(formatDateForInput(nextDate));
+                      }
+                    }}
+                    style={{
+                      padding: '12px',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      width: '100%'
+                    }}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    Hari tersedia: {getAvailableDays().map(day => {
+                      const dayMap: {[key: string]: string} = {
+                        'monday': 'Senin',
+                        'tuesday': 'Selasa',
+                        'wednesday': 'Rabu',
+                        'thursday': 'Kamis',
+                        'friday': 'Jumat',
+                        'saturday': 'Sabtu',
+                        'sunday': 'Minggu'
+                      };
+                      return dayMap[day];
+                    }).join(', ')}
+                  </small>
                 </div>
 
                 <div className="form-group">
@@ -1020,10 +1105,10 @@ export default function OrderPage() {
                   <button 
                     onClick={handleCheckout} 
                     className="btn-primary"
-                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid}
+                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid}
                     style={{
-                      opacity: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid) ? 0.5 : 1,
-                      cursor: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !addressValidation?.isValid) ? 'not-allowed' : 'pointer'
+                      opacity: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid) ? 0.5 : 1,
+                      cursor: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid) ? 'not-allowed' : 'pointer'
                     }}
                   >
                     Lanjut Bayar
@@ -1043,13 +1128,17 @@ export default function OrderPage() {
               className="order-step"
             >
               <div className="payment-section">
-                <h2 className="section-title">Pembayaran QRIS</h2>
+                <h2 className="section-title">Pilih Metode Pembayaran</h2>
                 
                 <div className="payment-methods">
+                  {/* QRIS Payment */}
                   <div 
-                    className="payment-method active"
-                    onClick={() => setShowPaymentDetails(!showPaymentDetails)}
-                    style={{ cursor: 'pointer' }}
+                    className={`payment-method ${paymentMethod === "qris" ? "active" : ""}`}
+                    onClick={() => {
+                      setPaymentMethod("qris");
+                      setShowPaymentDetails(true);
+                    }}
+                    style={{ cursor: 'pointer', marginBottom: '12px' }}
                   >
                     <div className="payment-icon">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1063,27 +1152,54 @@ export default function OrderPage() {
                       <h3>QRIS</h3>
                       <p>Scan QR untuk bayar</p>
                     </div>
-                    <div className="payment-toggle">
-                      <svg 
-                        width="20" 
-                        height="20" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2"
-                        style={{ 
-                          transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.3s'
-                        }}
-                      >
-                        <polyline points="6 9 12 15 18 9"></polyline>
+                    {paymentMethod === "qris" && (
+                      <div className="payment-toggle">
+                        <svg 
+                          width="20" 
+                          height="20" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                          style={{ 
+                            transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.3s'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPaymentDetails(!showPaymentDetails);
+                          }}
+                        >
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* COD Payment */}
+                  <div 
+                    className={`payment-method ${paymentMethod === "cod" ? "active" : ""}`}
+                    onClick={() => {
+                      setPaymentMethod("cod");
+                      setShowPaymentDetails(false);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="payment-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                       </svg>
+                    </div>
+                    <div className="payment-info">
+                      <h3>COD (Cash on Delivery)</h3>
+                      <p>Bayar saat barang diterima</p>
                     </div>
                   </div>
                 </div>
 
                 <AnimatePresence>
-                  {showPaymentDetails && (
+                  {showPaymentDetails && paymentMethod === "qris" && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -1137,13 +1253,14 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  {/* Upload Bukti Pembayaran */}
-                  <div className="payment-proof-upload">
-                    <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
-                    <p className="proof-instruction-inline">
-                      <strong style={{ color: '#ef4444' }}>PENTING:</strong> Transfer harus ke rekening atas nama <strong>SCAFF*FOOD</strong>. 
-                      Upload screenshot asli dari aplikasi banking (jangan di-edit).
-                    </p>
+                  {/* Upload Bukti Pembayaran - Only for QRIS */}
+                  {paymentMethod === "qris" && (
+                    <div className="payment-proof-upload">
+                      <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
+                      <p className="proof-instruction-inline">
+                        <strong style={{ color: '#ef4444' }}>PENTING:</strong> Transfer harus ke rekening atas nama <strong>SCAFF*FOOD</strong>. 
+                        Upload screenshot asli dari aplikasi banking (jangan di-edit).
+                      </p>
                     
                     <div className="upload-area-inline">
                       <input
@@ -1207,10 +1324,32 @@ export default function OrderPage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                    </div>
+                  )}
                 </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* COD Information */}
+                {paymentMethod === "cod" && (
+                  <div style={{
+                    marginTop: '20px',
+                    padding: '20px',
+                    background: '#f0fdf4',
+                    border: '2px solid #10b981',
+                    borderRadius: '8px'
+                  }}>
+                    <h3 style={{ marginBottom: '12px', color: '#10b981', fontSize: '16px', fontWeight: 600 }}>
+                      Informasi COD (Cash on Delivery) or (Cash or Duel)
+                    </h3>
+                    <ul style={{ margin: 0, paddingLeft: '20px', color: '#374151', fontSize: '14px', lineHeight: '1.8' }}>
+                      <li>Pembayaran dilakukan saat barang diterima</li>
+                      <li>Siapkan uang pas sebesar <strong>Rp {total.toLocaleString()}</strong></li>
+                      <li>Kurir akan menghubungi Anda sebelum pengiriman</li>
+                      <li>Pastikan Anda berada di lokasi saat pengiriman</li>
+                    </ul>
+                  </div>
+                )}
 
                 <div className="order-summary">
                   <div className="summary-row summary-total">
@@ -1226,9 +1365,9 @@ export default function OrderPage() {
                   <button 
                     onClick={handlePayment} 
                     className="btn-primary" 
-                    disabled={submitting || !verificationResult?.isValid}
+                    disabled={submitting || (paymentMethod === "qris" && !verificationResult?.isValid)}
                   >
-                    {submitting ? "Memproses..." : "Konfirmasi Pembayaran"}
+                    {submitting ? "Memproses..." : (paymentMethod === "cod" ? "Konfirmasi Pesanan" : "Konfirmasi Pembayaran")}
                   </button>
                 </div>
               </div>
@@ -1271,7 +1410,7 @@ export default function OrderPage() {
                   </div>
                   <div className="info-row">
                     <span>Metode Pembayaran</span>
-                    <strong>QRIS</strong>
+                    <strong>{paymentMethod === "qris" ? "QRIS" : "COD (Cash on Delivery)"}</strong>
                   </div>
                   <div className="info-row">
                     <span>Estimasi Pengiriman</span>
