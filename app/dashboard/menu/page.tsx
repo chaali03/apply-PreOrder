@@ -429,6 +429,8 @@ export default function DashboardMenuPage() {
       available_days_luar_tb: availableDaysLuarTB
     };
     
+    console.log('📦 Full payload being sent:', JSON.stringify(payload, null, 2));
+    
     // Only add qris_id if it has a valid value, otherwise explicitly set to null
     if (selectedQRISId && selectedQRISId.trim() !== '') {
       payload.qris_id = selectedQRISId;

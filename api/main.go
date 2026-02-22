@@ -940,7 +940,13 @@ func main() {
 			Conditions []map[string]interface{} `json:"conditions"`
 			Addons     []map[string]interface{} `json:"addons"`
 		}
+		
+		// Get raw body for debugging
+		bodyBytes := c.Body()
+		log.Printf("📦 Raw request body: %s", string(bodyBytes))
+		
 		if err := c.BodyParser(&requestData); err != nil {
+			log.Printf("❌ Error parsing body: %v", err)
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
 				"message": "Invalid request body",
@@ -1008,6 +1014,9 @@ func main() {
 				"message": "Failed to update product",
 			})
 		}
+		
+		log.Printf("✅ Updated %d rows", result.RowsAffected)
+		log.Printf("📦 Update map: %+v", updateMap)
 
 		// Handle variants update - always delete and recreate
 		// Delete existing variants first
