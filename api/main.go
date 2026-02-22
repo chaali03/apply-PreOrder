@@ -1517,13 +1517,21 @@ func main() {
 			Items []OrderItem   `json:"items"`
 		}
 
+		// Log raw body for debugging
+		bodyBytes := c.Body()
+		log.Printf("📦 Received order request body: %s", string(bodyBytes))
+
 		if err := c.BodyParser(&requestData); err != nil {
-			log.Printf("Error parsing order request: %v", err)
+			log.Printf("❌ Error parsing order request: %v", err)
+			log.Printf("❌ Request body: %s", string(c.Body()))
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
-				"message": "Invalid request body",
+				"message": fmt.Sprintf("Invalid request body: %v", err),
 			})
 		}
+
+		log.Printf("✅ Parsed order data: %+v", requestData.Order)
+		log.Printf("✅ Parsed items: %+v", requestData.Items)
 
 		// Generate order number
 		orderNumber := fmt.Sprintf("ORD-%s-%03d", time.Now().Format("20060102"), time.Now().Unix()%1000)

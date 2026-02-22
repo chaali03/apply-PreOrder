@@ -439,6 +439,18 @@ export default function OrderPage() {
 
   const handleCheckout = () => {
     if (customerInfo.name && customerInfo.phone && customerInfo.address && deliveryDate) {
+      // Check if all products with conditions have selected condition
+      const itemsWithConditions = cartItems.filter(item => item.conditions && item.conditions.length > 0);
+      const missingConditions = itemsWithConditions.filter(item => !selectedConditions[item.id]);
+      
+      if (missingConditions.length > 0) {
+        const productNames = missingConditions.map(item => item.name).join(', ');
+        setNotificationMessage(`Mohon pilih kondisi untuk: ${productNames}`);
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        return;
+      }
+      
       // Check address validation
       if (!addressValidation || !addressValidation.isValid) {
         setNotificationMessage("Alamat pengiriman tidak valid atau di luar area layanan");
@@ -482,6 +494,14 @@ export default function OrderPage() {
       }
     }
 
+    // Validate delivery date
+    if (!deliveryDate) {
+      setNotificationMessage("Mohon pilih tanggal pengiriman");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
+
     setSubmitting(true);
     
     try {
@@ -520,13 +540,13 @@ export default function OrderPage() {
           customer_phone: customerInfo.phone,
           delivery_address: customerInfo.address,
           delivery_location: customerInfo.deliveryLocation,
-          delivery_date: deliveryDate || null,
+          delivery_date: deliveryDate ? `${deliveryDate}T00:00:00Z` : null, // RFC3339 format
           subtotal: subtotal,
           delivery_fee: 0,
           total: total,
           payment_method: paymentMethod,
           payment_status: paymentMethod === "cod" ? "pending" : "paid",
-          payment_proof: paymentProofUrl,
+          payment_proof: paymentProofUrl || "",
           order_status: "processing"
         },
         items: cartItems.map(item => {
@@ -554,6 +574,9 @@ export default function OrderPage() {
       };
 
       console.log('📦 Submitting order:', orderData);
+      console.log('📦 Delivery date:', deliveryDate);
+      console.log('📦 Payment method:', paymentMethod);
+      console.log('📦 JSON payload:', JSON.stringify(orderData, null, 2));
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/orders`, {
         method: 'POST',
@@ -563,6 +586,7 @@ export default function OrderPage() {
 
       const data = await response.json();
       console.log('📦 Order response:', data);
+      console.log('📦 Response status:', response.status);
 
       if (data.success) {
         setOrderNumber(data.data.order.order_number);
@@ -579,12 +603,13 @@ export default function OrderPage() {
         // Show success
         setStep("success");
       } else {
-        setNotificationMessage('Gagal membuat pesanan: ' + data.message);
+        console.error('❌ Order failed:', data.message);
+        setNotificationMessage('Gagal membuat pesanan: ' + (data.message || 'Unknown error'));
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 3000);
       }
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.error('❌ Error creating order:', error);
       setNotificationMessage('Gagal terhubung ke server');
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
