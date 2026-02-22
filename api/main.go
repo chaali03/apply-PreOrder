@@ -51,10 +51,10 @@ type Product struct {
 	Stock              int              `gorm:"default:0" json:"stock"`
 	IsAvailable        bool             `gorm:"default:true" json:"is_available"`
 	MinOrder           int              `gorm:"default:1" json:"min_order"`
-	MinOrderTB         int              `gorm:"default:1" json:"min_order_tb"`
-	MinOrderLuarTB     int              `gorm:"default:1" json:"min_order_luar_tb"`
-	AvailableDaysTB    pq.StringArray   `gorm:"type:text[]" json:"available_days_tb"`
-	AvailableDaysLuarTB pq.StringArray  `gorm:"type:text[]" json:"available_days_luar_tb"`
+	MinOrderTB         int              `gorm:"column:min_order_tb;default:1" json:"min_order_tb"`
+	MinOrderLuarTB     int              `gorm:"column:min_order_luar_tb;default:1" json:"min_order_luar_tb"`
+	AvailableDaysTB    pq.StringArray   `gorm:"column:available_days_tb;type:text[]" json:"available_days_tb"`
+	AvailableDaysLuarTB pq.StringArray  `gorm:"column:available_days_luar_tb;type:text[]" json:"available_days_luar_tb"`
 	Conditions         string           `gorm:"type:jsonb;default:'[]'" json:"conditions,omitempty"`
 	Addons             string           `gorm:"type:jsonb;default:'[]'" json:"addons,omitempty"`
 	QRISId             *string          `gorm:"type:uuid" json:"qris_id,omitempty"`
@@ -946,6 +946,12 @@ func main() {
 				"message": "Invalid request body",
 			})
 		}
+
+		log.Printf("📦 Update product request data:")
+		log.Printf("  - MinOrderTB: %d", requestData.MinOrderTB)
+		log.Printf("  - MinOrderLuarTB: %d", requestData.MinOrderLuarTB)
+		log.Printf("  - AvailableDaysTB: %v", requestData.AvailableDaysTB)
+		log.Printf("  - AvailableDaysLuarTB: %v", requestData.AvailableDaysLuarTB)
 
 		// Convert conditions array to JSON string
 		if len(requestData.Conditions) > 0 {

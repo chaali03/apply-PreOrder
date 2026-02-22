@@ -1192,8 +1192,8 @@ export default function OrderPage() {
                       </svg>
                     </div>
                     <div className="payment-info">
-                      <h3>COD (Cash on Delivery)</h3>
-                      <p>Bayar saat barang diterima</p>
+                      <h3>COD (Cash on Delivery) or (Cash or Duel)</h3>
+                      <p>Bayar saat barang diterima atau barang tukar nyawa</p>
                     </div>
                   </div>
                 </div>
@@ -1347,6 +1347,7 @@ export default function OrderPage() {
                       <li>Siapkan uang pas sebesar <strong>Rp {total.toLocaleString()}</strong></li>
                       <li>Kurir akan menghubungi Anda sebelum pengiriman</li>
                       <li>Pastikan Anda berada di lokasi saat pengiriman</li>
+                      <li>Kalau tidak mau dibayar dengan uang bertimpuk kita</li>
                     </ul>
                   </div>
                 )}
