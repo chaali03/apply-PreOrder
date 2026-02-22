@@ -23,6 +23,7 @@ interface Order {
   customer_phone: string;
   delivery_address: string;
   delivery_location?: string;
+  delivery_date?: string;
   subtotal: number;
   delivery_fee: number;
   total: number;
@@ -598,6 +599,37 @@ export default function DashboardOrdersPage() {
                         )}
                       </div>
                     </div>
+
+                    {order.delivery_date && (
+                      <div className="order-delivery-date-section" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '12px',
+                        background: '#f0fdf4',
+                        border: '2px solid #10b981',
+                        borderRadius: '8px',
+                        marginTop: '12px'
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', color: '#065f46', fontWeight: 600 }}>Estimasi Pengiriman</span>
+                          <span style={{ fontSize: '13px', color: '#047857', fontWeight: 700 }}>
+                            {new Date(order.delivery_date).toLocaleDateString('id-ID', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="order-card-footer">
@@ -909,6 +941,27 @@ export default function DashboardOrdersPage() {
                     </span>
                   </div>
                 </div>
+                {orderToComplete.delivery_date && (
+                  <div className="customer-info-row">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <div>
+                      <span className="info-label">Estimasi Pengiriman</span>
+                      <span className="info-value" style={{ color: '#10b981', fontWeight: 700 }}>
+                        {new Date(orderToComplete.delivery_date).toLocaleDateString('id-ID', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Photo Upload Section */}

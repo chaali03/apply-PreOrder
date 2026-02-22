@@ -1332,31 +1332,48 @@ export default function OrderPage() {
                   <div className="form-group" style={{ 
                     marginTop: '24px', 
                     padding: '20px', 
-                    background: '#f0f9ff', 
-                    border: '2px solid #0ea5e9',
+                    background: '#fef2f2', 
+                    border: '2px solid #ef4444',
                     borderRadius: '8px'
                   }}>
                     <h3 style={{ 
                       fontSize: '16px', 
                       fontWeight: 700, 
-                      marginBottom: '16px',
-                      color: '#1a1a1a'
+                      marginBottom: '8px',
+                      color: '#1a1a1a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
                       Pilih Kondisi Produk
+                      <span style={{ color: '#ef4444', fontSize: '18px' }}>*</span>
                     </h3>
+                    <p style={{ 
+                      fontSize: '13px', 
+                      color: '#dc2626', 
+                      marginBottom: '16px',
+                      fontWeight: 600
+                    }}>
+                      Wajib diisi untuk semua produk
+                    </p>
                     {cartItems.map(item => {
                       if (!item.conditions || item.conditions.length === 0) return null;
+                      
+                      const isSelected = selectedConditions[item.id];
                       
                       return (
                         <div key={item.id} style={{ marginBottom: '20px' }}>
                           <label style={{ 
-                            display: 'block', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
                             fontSize: '14px', 
                             fontWeight: 600, 
                             marginBottom: '8px',
                             color: '#374151'
                           }}>
                             {item.name}
+                            <span style={{ color: '#ef4444', fontSize: '16px' }}>*</span>
                           </label>
                           <select
                             className="form-input"
@@ -1368,13 +1385,14 @@ export default function OrderPage() {
                             style={{
                               width: '100%',
                               padding: '12px',
-                              border: '2px solid #1a1a1a',
+                              border: isSelected ? '2px solid #10b981' : '2px solid #ef4444',
                               borderRadius: '4px',
                               fontSize: '14px',
-                              background: 'white'
+                              background: 'white',
+                              outline: 'none'
                             }}
                           >
-                            <option value="">Pilih kondisi...</option>
+                            <option value="">-- Pilih kondisi (wajib) --</option>
                             {item.conditions.map((condition, idx) => (
                               <option key={idx} value={condition.name}>
                                 {condition.name}
@@ -1384,12 +1402,20 @@ export default function OrderPage() {
                               </option>
                             ))}
                           </select>
+                          {!isSelected && (
+                            <small style={{ 
+                              color: '#dc2626', 
+                              fontSize: '12px', 
+                              display: 'block', 
+                              marginTop: '4px',
+                              fontWeight: 600
+                            }}>
+                              ⚠️ Kondisi harus dipilih
+                            </small>
+                          )}
                         </div>
                       );
                     })}
-                    <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '8px' }}>
-                      * Pilih kondisi untuk setiap produk yang memiliki opsi kondisi
-                    </small>
                   </div>
                 )}
 
@@ -1446,10 +1472,44 @@ export default function OrderPage() {
                   <button 
                     onClick={handleCheckout} 
                     className="btn-primary"
-                    disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid}
+                    disabled={
+                      !customerInfo.name || 
+                      !customerInfo.phone || 
+                      !customerInfo.address || 
+                      !deliveryDate || 
+                      !addressValidation?.isValid ||
+                      // Check if all products with conditions have selected condition
+                      cartItems.some(item => 
+                        item.conditions && 
+                        item.conditions.length > 0 && 
+                        !selectedConditions[item.id]
+                      )
+                    }
                     style={{
-                      opacity: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid) ? 0.5 : 1,
-                      cursor: (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !deliveryDate || !addressValidation?.isValid) ? 'not-allowed' : 'pointer'
+                      opacity: (
+                        !customerInfo.name || 
+                        !customerInfo.phone || 
+                        !customerInfo.address || 
+                        !deliveryDate || 
+                        !addressValidation?.isValid ||
+                        cartItems.some(item => 
+                          item.conditions && 
+                          item.conditions.length > 0 && 
+                          !selectedConditions[item.id]
+                        )
+                      ) ? 0.5 : 1,
+                      cursor: (
+                        !customerInfo.name || 
+                        !customerInfo.phone || 
+                        !customerInfo.address || 
+                        !deliveryDate || 
+                        !addressValidation?.isValid ||
+                        cartItems.some(item => 
+                          item.conditions && 
+                          item.conditions.length > 0 && 
+                          !selectedConditions[item.id]
+                        )
+                      ) ? 'not-allowed' : 'pointer'
                     }}
                   >
                     Lanjut Bayar
