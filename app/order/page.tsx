@@ -1754,7 +1754,14 @@ export default function OrderPage() {
                   </div>
                   <div className="info-row">
                     <span>Estimasi Pengiriman</span>
-                    <strong>30 menit-48 jam (kecuali hari minggu)</strong>
+                    <strong>
+                      {deliveryDate ? new Date(deliveryDate + 'T00:00:00').toLocaleDateString('id-ID', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      }) : '30 menit-48 jam'}
+                    </strong>
                   </div>
                 </div>
 
