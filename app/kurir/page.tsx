@@ -228,8 +228,22 @@ function KurirContent() {
         <section className="orders-section">
           <div className="orders-container">
             {loading ? (
-              <div className="loading-state">
-                <p>Memuat pesanan...</p>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '400px',
+                gap: '16px'
+              }}>
+                <Spinner size="large" />
+                <p style={{ 
+                  fontSize: '16px', 
+                  color: '#6b7280',
+                  fontWeight: 600
+                }}>
+                  Memuat pesanan...
+                </p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="no-orders">
