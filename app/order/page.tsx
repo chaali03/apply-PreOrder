@@ -331,6 +331,7 @@ export default function OrderPage() {
       setVerifying(false);
     }
   };
+  
   const [submitting, setSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [showNotification, setShowNotification] = useState(false);
@@ -1031,80 +1032,250 @@ export default function OrderPage() {
                   )}
                 </div>
 
-                {/* Display selected delivery location (read-only) */}
-                <div className="form-group" style={{ 
-                  marginTop: '20px', 
-                  padding: '16px', 
-                  background: '#f0fdf4', 
-                  border: '2px solid #10b981',
-                  borderRadius: '8px'
-                }}>
-                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '14px' }}>
-                    Lokasi Pengiriman
+                {/* Editable Delivery Location */}
+                <div className="form-group" style={{ marginTop: '20px' }}>
+                  <label className="form-label" style={{ marginBottom: '12px', display: 'block', fontSize: '14px', fontWeight: 600 }}>
+                    Lokasi Pengiriman *
                   </label>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    color: '#10b981'
-                  }}>
-                    {customerInfo.deliveryLocation === "TB" ? (
-                      <>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
-                        Dalam TB
-                      </>
-                    ) : (
-                      <>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                          <circle cx="12" cy="10" r="3"></circle>
-                          <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
-                        </svg>
-                        Luar TB
-                      </>
-                    )}
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: 'TB'})}
+                      style={{
+                        flex: 1,
+                        padding: '16px',
+                        background: customerInfo.deliveryLocation === 'TB' ? '#2563eb' : 'white',
+                        border: `3px solid ${customerInfo.deliveryLocation === 'TB' ? '#2563eb' : '#d1d5db'}`,
+                        borderRadius: '12px',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: customerInfo.deliveryLocation === 'TB' ? 'white' : '#374151',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: customerInfo.deliveryLocation === 'TB' ? '0 4px 6px rgba(37, 99, 235, 0.3)' : 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (customerInfo.deliveryLocation !== 'TB') {
+                          e.currentTarget.style.borderColor = '#9ca3af';
+                          e.currentTarget.style.background = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (customerInfo.deliveryLocation !== 'TB') {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.background = 'white';
+                        }
+                      }}
+                    >
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                      </svg>
+                      <span>Dalam TB</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomerInfo({...customerInfo, deliveryLocation: 'Luar TB'})}
+                      style={{
+                        flex: 1,
+                        padding: '16px',
+                        background: customerInfo.deliveryLocation === 'Luar TB' ? '#7c3aed' : 'white',
+                        border: `3px solid ${customerInfo.deliveryLocation === 'Luar TB' ? '#7c3aed' : '#d1d5db'}`,
+                        borderRadius: '12px',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: customerInfo.deliveryLocation === 'Luar TB' ? 'white' : '#374151',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: customerInfo.deliveryLocation === 'Luar TB' ? '0 4px 6px rgba(124, 58, 237, 0.3)' : 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (customerInfo.deliveryLocation !== 'Luar TB') {
+                          e.currentTarget.style.borderColor = '#9ca3af';
+                          e.currentTarget.style.background = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (customerInfo.deliveryLocation !== 'Luar TB') {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.background = 'white';
+                        }
+                      }}
+                    >
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="10" r="3"></circle>
+                        <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
+                      </svg>
+                      <span>Luar TB</span>
+                    </button>
                   </div>
-                  <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    Lokasi dipilih dari halaman produk. Alamat harus sesuai dengan lokasi ini.
+                  <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                    Pilih lokasi sesuai dengan alamat pengiriman Anda
                   </small>
                 </div>
 
-                {/* Delivery Date Picker */}
+                {/* Custom Calendar for Delivery Date */}
                 <div className="form-group">
                   <label className="form-label">Estimasi Tanggal Pengiriman *</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    required
-                    value={deliveryDate}
-                    min={getMinDate()}
-                    max={getMaxDate()}
-                    onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      if (isDateAvailable(selectedDate)) {
-                        setDeliveryDate(e.target.value);
-                      } else {
-                        setNotificationMessage('Hari yang dipilih tidak tersedia untuk produk ini');
-                        setShowNotification(true);
-                        setTimeout(() => setShowNotification(false), 3000);
-                        // Set to next available date
-                        const nextDate = getNextAvailableDate(selectedDate);
-                        setDeliveryDate(formatDateForInput(nextDate));
-                      }
-                    }}
-                    style={{
-                      padding: '12px',
-                      border: '2px solid #d1d5db',
+                  
+                  {/* Selected Date Display */}
+                  {deliveryDate && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#f0fdf4',
+                      border: '2px solid #10b981',
                       borderRadius: '8px',
-                      fontSize: '14px',
-                      width: '100%'
-                    }}
-                  />
-                  <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#065f46' }}>
+                          {new Date(deliveryDate + 'T00:00:00').toLocaleDateString('id-ID', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryDate('')}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}
+                      >
+                        Ubah
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Calendar Grid */}
+                  {!deliveryDate && (
+                    <div style={{
+                      border: '2px solid #d1d5db',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      background: 'white'
+                    }}>
+                      {/* Calendar Header */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
+                        gap: '8px',
+                        marginBottom: '12px',
+                        paddingBottom: '12px',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>
+                        {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(day => (
+                          <div key={day} style={{
+                            textAlign: 'center',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: '#6b7280'
+                          }}>
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Calendar Days */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
+                        gap: '8px'
+                      }}>
+                        {(() => {
+                          const today = new Date();
+                          const currentMonth = today.getMonth();
+                          const currentYear = today.getFullYear();
+                          const firstDay = new Date(currentYear, currentMonth, 1);
+                          const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                          const startDayOfWeek = firstDay.getDay();
+                          const daysInMonth = lastDay.getDate();
+                          
+                          const days = [];
+                          
+                          // Empty cells for days before month starts
+                          for (let i = 0; i < startDayOfWeek; i++) {
+                            days.push(<div key={`empty-${i}`} />);
+                          }
+                          
+                          // Days of the month
+                          for (let day = 1; day <= daysInMonth; day++) {
+                            const date = new Date(currentYear, currentMonth, day);
+                            const dateStr = formatDateForInput(date);
+                            const isPast = date < new Date(today.setHours(0, 0, 0, 0));
+                            const isAvailable = !isPast && isDateAvailable(date);
+                            const isToday = day === today.getDate() && currentMonth === today.getMonth();
+                            
+                            days.push(
+                              <button
+                                key={day}
+                                type="button"
+                                disabled={!isAvailable}
+                                onClick={() => isAvailable && setDeliveryDate(dateStr)}
+                                style={{
+                                  padding: '12px',
+                                  border: isToday ? '2px solid #2563eb' : '2px solid transparent',
+                                  borderRadius: '8px',
+                                  background: isAvailable ? '#f0fdf4' : '#f3f4f6',
+                                  color: isAvailable ? '#065f46' : '#9ca3af',
+                                  fontSize: '14px',
+                                  fontWeight: isToday ? 700 : 600,
+                                  cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                  transition: 'all 0.2s',
+                                  opacity: isAvailable ? 1 : 0.5
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (isAvailable) {
+                                    e.currentTarget.style.background = '#10b981';
+                                    e.currentTarget.style.color = 'white';
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (isAvailable) {
+                                    e.currentTarget.style.background = '#f0fdf4';
+                                    e.currentTarget.style.color = '#065f46';
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                  }
+                                }}
+                              >
+                                {day}
+                              </button>
+                            );
+                          }
+                          
+                          return days;
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <small style={{ color: '#666', fontSize: '12px', marginTop: '8px', display: 'block' }}>
                     Hari tersedia: {getAvailableDays().map(day => {
                       const dayMap: {[key: string]: string} = {
                         'monday': 'Senin',
@@ -1352,126 +1523,124 @@ export default function OrderPage() {
                       transition={{ duration: 0.3 }}
                       className="payment-details"
                     >
-                  <h3 className="details-title">Scan QR Code</h3>
-                  <div className="qris-code">
-                    <div className="qr-image-container">
-                      {qrCodeUrl ? (
-                        <>
-                          <img 
-                            src={qrCodeUrl} 
-                            alt="QRIS Code" 
-                            className="qr-image"
-                          />
-                          <button onClick={downloadQR} className="btn-download-qr-inline">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                              <polyline points="7 10 12 15 17 10"></polyline>
-                              <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Download QR
-                          </button>
-                        </>
-                      ) : (
-                        <div className="qr-placeholder">
-                          <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                            <rect x="3" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="14" width="7" height="7"></rect>
-                            <rect x="3" y="14" width="7" height="7"></rect>
-                          </svg>
-                          <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                            Generating QR Code...
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    <p className="qris-instruction">Scan dengan aplikasi pembayaran Anda</p>
-                    <div className="qris-apps">
-                      <span className="qris-app-badge">GoPay</span>
-                      <span className="qris-app-badge">OVO</span>
-                      <span className="qris-app-badge">Dana</span>
-                      <span className="qris-app-badge">ShopeePay</span>
-                    </div>
-                    <div className="qris-amount">
-                      <p>Total Pembayaran</p>
-                      <h3>Rp {total.toLocaleString()}</h3>
-                    </div>
-                  </div>
-
-                  {/* Upload Bukti Pembayaran - Only for QRIS */}
-                  {paymentMethod === "qris" && (
-                    <div className="payment-proof-upload">
-                      <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
-                      <p className="proof-instruction-inline">
-                        <strong style={{ color: '#ef4444' }}>PENTING:</strong> Transfer harus ke rekening atas nama <strong>SCAFF*FOOD</strong>. 
-                        Upload screenshot asli dari aplikasi banking (jangan di-edit).
-                      </p>
-                    
-                    <div className="upload-area-inline">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePaymentProofUpload}
-                        id="payment-proof"
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="payment-proof" className="upload-label-inline">
-                        {paymentProof ? (
-                          <div className="proof-preview-inline">
-                            <img src={paymentProof} alt="Bukti Pembayaran" />
-                            <div className="proof-overlay-inline">
-                              <p>Klik untuk ganti gambar</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="upload-placeholder-inline">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                              <polyline points="21 15 16 10 5 21"></polyline>
-                            </svg>
-                            <p>Klik untuk upload bukti pembayaran</p>
-                            <span>PNG, JPG, JPEG (Max 5MB)</span>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-
-                    {verifying && (
-                      <div className="verification-status-inline verifying">
-                        <div className="spinner-inline"></div>
-                        <div className="verification-text-inline">
-                          <p className="verification-message-inline">Memverifikasi bukti pembayaran dengan AI...</p>
-                          <p className="verification-submessage-inline">Mohon tunggu sebentar</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {verificationResult && (
-                      <div className={`verification-status-inline ${verificationResult.isValid ? 'valid' : 'invalid'}`}>
-                        <div className="verification-icon-inline">
-                          {verificationResult.isValid ? (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
+                      <h3 className="details-title">Scan QR Code</h3>
+                      <div className="qris-code">
+                        <div className="qr-image-container">
+                          {qrCodeUrl ? (
+                            <>
+                              <img 
+                                src={qrCodeUrl} 
+                                alt="QRIS Code" 
+                                className="qr-image"
+                              />
+                              <button onClick={downloadQR} className="btn-download-qr-inline">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                  <polyline points="7 10 12 15 17 10"></polyline>
+                                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Download QR
+                              </button>
+                            </>
                           ) : (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <line x1="18" y1="6" x2="6" y2="18"></line>
-                              <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
+                            <div className="qr-placeholder">
+                              <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                              </svg>
+                              <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                                Generating QR Code...
+                              </p>
+                            </div>
                           )}
                         </div>
-                        <div className="verification-details-inline">
-                          <p className="verification-message-inline">{verificationResult.message}</p>
-                          <p className="verification-confidence-inline">
-                            AI Confidence: {verificationResult.confidence.toFixed(1)}%
-                          </p>
+                        <p className="qris-instruction">Scan dengan aplikasi pembayaran Anda</p>
+                        <div className="qris-apps">
+                          <span className="qris-app-badge">GoPay</span>
+                          <span className="qris-app-badge">OVO</span>
+                          <span className="qris-app-badge">Dana</span>
+                          <span className="qris-app-badge">ShopeePay</span>
+                        </div>
+                        <div className="qris-amount">
+                          <p>Total Pembayaran</p>
+                          <h3>Rp {total.toLocaleString()}</h3>
                         </div>
                       </div>
-                    )}
-                    </div>
-                  )}
-                </motion.div>
+
+                      {/* Upload Bukti Pembayaran - Only for QRIS */}
+                      <div className="payment-proof-upload">
+                        <h3 className="details-title" style={{ marginTop: '2rem' }}>Upload Bukti Pembayaran</h3>
+                        <p className="proof-instruction-inline">
+                          <strong style={{ color: '#ef4444' }}>PENTING:</strong> Transfer harus ke rekening atas nama <strong>SCAFF*FOOD</strong>. 
+                          Upload screenshot asli dari aplikasi banking (jangan di-edit).
+                        </p>
+                        
+                        <div className="upload-area-inline">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePaymentProofUpload}
+                            id="payment-proof"
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="payment-proof" className="upload-label-inline">
+                            {paymentProof ? (
+                              <div className="proof-preview-inline">
+                                <img src={paymentProof} alt="Bukti Pembayaran" />
+                                <div className="proof-overlay-inline">
+                                  <p>Klik untuk ganti gambar</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="upload-placeholder-inline">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                  <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                                <p>Klik untuk upload bukti pembayaran</p>
+                                <span>PNG, JPG, JPEG (Max 5MB)</span>
+                              </div>
+                            )}
+                          </label>
+                        </div>
+
+                        {verifying && (
+                          <div className="verification-status-inline verifying">
+                            <div className="spinner-inline"></div>
+                            <div className="verification-text-inline">
+                              <p className="verification-message-inline">Memverifikasi bukti pembayaran dengan AI...</p>
+                              <p className="verification-submessage-inline">Mohon tunggu sebentar</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {verificationResult && (
+                          <div className={`verification-status-inline ${verificationResult.isValid ? 'valid' : 'invalid'}`}>
+                            <div className="verification-icon-inline">
+                              {verificationResult.isValid ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              )}
+                            </div>
+                            <div className="verification-details-inline">
+                              <p className="verification-message-inline">{verificationResult.message}</p>
+                              <p className="verification-confidence-inline">
+                                AI Confidence: {verificationResult.confidence.toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
 

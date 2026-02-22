@@ -1015,8 +1015,8 @@ func main() {
 		product.MinOrderLuarTB = requestData.MinOrderLuarTB
 		product.AvailableDaysTB = requestData.AvailableDaysTB
 		product.AvailableDaysLuarTB = requestData.AvailableDaysLuarTB
-		product.Conditions = requestData.Conditions
-		product.Addons = requestData.Addons
+		product.Conditions = requestData.Product.Conditions
+		product.Addons = requestData.Product.Addons
 		product.QRISId = requestData.QRISId
 		
 		log.Printf("📦 Saving product with MinOrderTB=%d, MinOrderLuarTB=%d", product.MinOrderTB, product.MinOrderLuarTB)
