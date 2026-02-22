@@ -3,7 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
+import dynamic from 'next/dynamic';
 import './order.css';
+
+// Dynamic import for MapPreview to avoid SSR issues with Leaflet
+const MapPreview = dynamic(() => import('../../components/ui/map-preview'), {
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Loading map...</div>
+});
 
 interface CartItem {
   id: string;
@@ -367,6 +374,7 @@ export default function OrderPage() {
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [showLocationOverride, setShowLocationOverride] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<{lat: number, lng: number, address: string} | null>(null);
 
   const updateQuantity = (id: string, change: number) => {
     setCartItems(items =>
@@ -506,6 +514,13 @@ export default function OrderPage() {
             if (!formattedAddress) {
               formattedAddress = data.display_name;
             }
+            
+            // Save coordinates and address for map preview
+            setLocationCoords({
+              lat: latitude,
+              lng: longitude,
+              address: formattedAddress
+            });
             
             setCustomerInfo(prev => ({
               ...prev,
@@ -983,6 +998,15 @@ export default function OrderPage() {
                       : "Untuk luar TB: Alamat lengkap dengan RT/RW di area Cimangis, Pekapuran, atau Gas Alam Depok"
                     }
                   </p>
+                  
+                  {/* Map Preview */}
+                  {locationCoords && (
+                    <MapPreview 
+                      latitude={locationCoords.lat}
+                      longitude={locationCoords.lng}
+                      address={locationCoords.address}
+                    />
+                  )}
                   
                   {/* AI Address Validation Result */}
                   {validatingAddress && (
