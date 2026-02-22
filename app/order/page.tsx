@@ -924,7 +924,7 @@ export default function OrderPage() {
                       disabled={gettingLocation}
                       style={{
                         padding: '6px 12px',
-                        background: gettingLocation ? '#d1d5db' : '#10b981',
+                        background: gettingLocation ? '#d1d5db' : '#FF6B35',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -938,12 +938,12 @@ export default function OrderPage() {
                       }}
                       onMouseEnter={(e) => {
                         if (!gettingLocation) {
-                          e.currentTarget.style.background = '#059669';
+                          e.currentTarget.style.background = '#e55a1f';
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!gettingLocation) {
-                          e.currentTarget.style.background = '#10b981';
+                          e.currentTarget.style.background = '#FF6B35';
                         }
                       }}
                     >
@@ -1398,12 +1398,15 @@ export default function OrderPage() {
                   
                   {/* Calendar Grid */}
                   {!deliveryDate && (
-                    <div style={{
-                      border: '2px solid #d1d5db',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      background: 'white'
-                    }}>
+                    <div 
+                      key={`calendar-${customerInfo.deliveryLocation}`}
+                      style={{
+                        border: '2px solid #d1d5db',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        background: 'white'
+                      }}
+                    >
                       {/* Calendar Header */}
                       <div style={{
                         display: 'grid',
@@ -1432,6 +1435,11 @@ export default function OrderPage() {
                         gap: '8px'
                       }}>
                         {(() => {
+                          // Get available days for current location
+                          const availableDaysForLocation = getAvailableDays();
+                          console.log('📅 Rendering calendar for location:', customerInfo.deliveryLocation);
+                          console.log('📅 Available days:', availableDaysForLocation);
+                          
                           const today = new Date();
                           const currentMonth = today.getMonth();
                           const currentYear = today.getFullYear();
@@ -1455,6 +1463,16 @@ export default function OrderPage() {
                             const isSunday = date.getDay() === 0; // Sunday = 0
                             const isAvailable = !isPast && !isSunday && isDateAvailable(date);
                             const isToday = day === today.getDate() && currentMonth === today.getMonth();
+                            
+                            // Debug log for first few days
+                            if (day <= 3) {
+                              console.log(`Day ${day}:`, {
+                                isPast,
+                                isSunday,
+                                isAvailable,
+                                dayName: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()]
+                              });
+                            }
                             
                             days.push(
                               <button
