@@ -48,8 +48,8 @@ async function proxyRequest(
   method: string
 ) {
   try {
-    // Get backend URL from environment
-    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
+    // Get backend URL from environment - try both variables
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
     
     // Construct the full path
     const path = pathSegments.join('/');
