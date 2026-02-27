@@ -1,41 +1,40 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.scafffood.my.id';
-    
-    const response = await fetch(`${backendUrl}/api/orders`, {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    const url = `${backendUrl}/api/orders/pending-count`;
+
+    console.log(`[Pending Count] GET ${url}`);
+
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
-        'ngrok-skip-browser-warning': '1'
+        'Content-Type': 'application/json',
       },
-      cache: 'no-store'
+      // Add timeout
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch orders:', response.status);
+      console.error(`[Pending Count] Backend returned ${response.status}`);
+      // Return 0 count if backend is down instead of failing
       return NextResponse.json({
-        success: false,
-        count: 0
+        success: true,
+        count: 0,
       });
     }
 
     const data = await response.json();
-    
-    // Count orders with status "processing" (diterima/menunggu)
-    const pendingCount = Array.isArray(data) ? data.filter((order: any) => 
-      order.order_status === 'processing'
-    ).length : 0;
+    console.log(`[Pending Count] Response:`, data);
 
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('[Pending Count] Error:', error);
+    // Return 0 count gracefully instead of error
     return NextResponse.json({
       success: true,
-      count: pendingCount
-    });
-  } catch (error) {
-    console.error('Error fetching pending orders count:', error);
-    // Return 0 instead of 500 error to prevent UI errors
-    return NextResponse.json({
-      success: false,
-      count: 0
+      count: 0,
     });
   }
 }

@@ -41,17 +41,29 @@ export default function Home() {
     getApiBaseUrl().then(setApiBase);
   }, []);
 
-  // Fetch pending orders count
+  // Fetch pending orders count with retry logic
   useEffect(() => {
     const fetchPendingCount = async () => {
       try {
-        const response = await fetch('/api/orders/pending-count');
-        const data = await response.json();
-        if (data.success) {
-          setPendingOrdersCount(data.count);
+        const response = await fetch('/api/orders/pending-count', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        // Always try to parse JSON, fallback to 0 on error
+        try {
+          const data = await response.json();
+          if (data.success && typeof data.count === 'number') {
+            setPendingOrdersCount(data.count);
+          } else {
+            setPendingOrdersCount(0);
+          }
+        } catch {
+          setPendingOrdersCount(0);
         }
       } catch (error) {
-        console.error('Error fetching pending orders count:', error);
+        // Silently fail and set to 0 - don't spam console
+        setPendingOrdersCount(0);
       }
     };
 
