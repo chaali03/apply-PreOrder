@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,18 +10,101 @@ import (
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/joho/godotenv"
 	"github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+// ==================== SECURITY STRUCTURES ====================
+
+// IP Blacklist for DDoS protection
+type IPBlacklist struct {
+	mu        sync.RWMutex
+	ips       map[string]time.Time
+	attempts  map[string]int
+}
+
+var ipBlacklist = &IPBlacklist{
+	ips:      make(map[string]time.Time),
+	attempts: make(map[string]int),
+}
+
+// Add IP to blacklist
+func (bl *IPBlacklist) Add(ip string, duration time.Duration) {
+	bl.mu.Lock()
+	defer bl.mu.Unlock()
+	bl.ips[ip] = time.Now().Add(duration)
+	log.Printf("🚫 IP %s blacklisted for %v", ip, duration)
+}
+
+// Check if IP is blacklisted
+func (bl *IPBlacklist) IsBlacklisted(ip string) bool {
+	bl.mu.RLock()
+	defer bl.mu.RUnlock()
+	
+	if expiry, exists := bl.ips[ip]; exists {
+		if time.Now().Before(expiry) {
+			return true
+		}
+		// Remove expired entry
+		delete(bl.ips, ip)
+	}
+	return false
+}
+
+// Track failed attempts
+func (bl *IPBlacklist) TrackAttempt(ip string) int {
+	bl.mu.Lock()
+	defer bl.mu.Unlock()
+	
+	bl.attempts[ip]++
+	count := bl.attempts[ip]
+	
+	// Auto-blacklist after 10 failed attempts
+	if count >= 10 {
+		bl.ips[ip] = time.Now().Add(1 * time.Hour)
+		bl.attempts[ip] = 0
+		log.Printf("🚫 IP %s auto-blacklisted after %d attempts", ip, count)
+	}
+	
+	return count
+}
+
+// Reset attempts on success
+func (bl *IPBlacklist) ResetAttempts(ip string) {
+	bl.mu.Lock()
+	defer bl.mu.Unlock()
+	delete(bl.attempts, ip)
+}
+
+// Clean expired entries periodically
+func (bl *IPBlacklist) CleanExpired() {
+	bl.mu.Lock()
+	defer bl.mu.Unlock()
+	
+	now := time.Now()
+	for ip, expiry := range bl.ips {
+		if now.After(expiry) {
+			delete(bl.ips, ip)
+			delete(bl.attempts, ip)
+		}
+	}
+}
+
 
 // Database connection
 var DB *gorm.DB
@@ -250,6 +335,242 @@ func generateRandomString(length int) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// ==================== SECURITY FUNCTIONS ====================
+
+// Sanitize string input to prevent XSS and SQL injection
+func sanitizeString(input string) string {
+	// Remove HTML tags
+	re := regexp.MustCompile(`<[^>]*>`)
+	cleaned := re.ReplaceAllString(input, "")
+	
+	// Remove SQL injection patterns
+	sqlPatterns := []string{
+		`(?i)(\bUNION\b|\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bCREATE\b|\bALTER\b)`,
+		`--`,
+		`;`,
+		`/\*`,
+		`\*/`,
+		`xp_`,
+		`sp_`,
+	}
+	
+	for _, pattern := range sqlPatterns {
+		re := regexp.MustCompile(pattern)
+		cleaned = re.ReplaceAllString(cleaned, "")
+	}
+	
+	// Trim whitespace
+	cleaned = strings.TrimSpace(cleaned)
+	
+	return cleaned
+}
+
+// Validate email format
+func isValidEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+// Validate phone number (Indonesian format)
+func isValidPhone(phone string) bool {
+	// Remove common separators
+	cleaned := strings.ReplaceAll(phone, " ", "")
+	cleaned = strings.ReplaceAll(cleaned, "-", "")
+	cleaned = strings.ReplaceAll(cleaned, "(", "")
+	cleaned = strings.ReplaceAll(cleaned, ")", "")
+	
+	// Check if it's a valid Indonesian phone number
+	phoneRegex := regexp.MustCompile(`^(\+62|62|0)[0-9]{9,12}$`)
+	return phoneRegex.MatchString(cleaned)
+}
+
+// Validate UUID format
+func isValidUUID(uuid string) bool {
+	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	return uuidRegex.MatchString(uuid)
+}
+
+// Sanitize order data
+func sanitizeOrderData(order *Order) {
+	order.CustomerName = sanitizeString(order.CustomerName)
+	order.CustomerEmail = sanitizeString(order.CustomerEmail)
+	order.CustomerPhone = sanitizeString(order.CustomerPhone)
+	order.DeliveryAddress = sanitizeString(order.DeliveryAddress)
+	order.DeliveryLocation = sanitizeString(order.DeliveryLocation)
+	order.PaymentMethod = sanitizeString(order.PaymentMethod)
+	order.CancellationReason = sanitizeString(order.CancellationReason)
+	order.AppreciationMessage = sanitizeString(order.AppreciationMessage)
+}
+
+// Validate order data
+func validateOrderData(order *Order) error {
+	if order.CustomerName == "" {
+		return fmt.Errorf("customer name is required")
+	}
+	if len(order.CustomerName) > 100 {
+		return fmt.Errorf("customer name is too long")
+	}
+	
+	if !isValidEmail(order.CustomerEmail) {
+		return fmt.Errorf("invalid email format")
+	}
+	
+	if !isValidPhone(order.CustomerPhone) {
+		return fmt.Errorf("invalid phone number format")
+	}
+	
+	if order.DeliveryAddress == "" {
+		return fmt.Errorf("delivery address is required")
+	}
+	if len(order.DeliveryAddress) > 500 {
+		return fmt.Errorf("delivery address is too long")
+	}
+	
+	if order.Total <= 0 {
+		return fmt.Errorf("invalid order total")
+	}
+	
+	return nil
+}
+
+// ==================== ADVANCED SECURITY FUNCTIONS ====================
+
+// Detect SQL injection attempts
+func detectSQLInjection(input string) bool {
+	sqlPatterns := []string{
+		`(?i)\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b`,
+		`--`,
+		`;.*--`,
+		`/\*.*\*/`,
+		`xp_`,
+		`sp_`,
+		`0x[0-9a-f]+`,
+		`\bOR\b.*=.*`,
+		`\bAND\b.*=.*`,
+		`'.*OR.*'.*=.*'`,
+	}
+	
+	for _, pattern := range sqlPatterns {
+		matched, _ := regexp.MatchString(pattern, input)
+		if matched {
+			log.Printf("🚨 SQL Injection attempt detected: %s", input)
+			return true
+		}
+	}
+	return false
+}
+
+// Detect XSS attempts
+func detectXSS(input string) bool {
+	xssPatterns := []string{
+		`<script[^>]*>.*</script>`,
+		`javascript:`,
+		`onerror\s*=`,
+		`onload\s*=`,
+		`onclick\s*=`,
+		`<iframe`,
+		`<embed`,
+		`<object`,
+		`eval\(`,
+		`alert\(`,
+		`document\.cookie`,
+		`window\.location`,
+	}
+	
+	for _, pattern := range xssPatterns {
+		matched, _ := regexp.MatchString(pattern, strings.ToLower(input))
+		if matched {
+			log.Printf("🚨 XSS attempt detected: %s", input)
+			return true
+		}
+	}
+	return false
+}
+
+// Detect path traversal attempts
+func detectPathTraversal(input string) bool {
+	pathPatterns := []string{
+		`\.\.\/`,
+		`\.\.\\`,
+		`%2e%2e`,
+		`%252e%252e`,
+		`..;`,
+	}
+	
+	for _, pattern := range pathPatterns {
+		matched, _ := regexp.MatchString(pattern, strings.ToLower(input))
+		if matched {
+			log.Printf("🚨 Path traversal attempt detected: %s", input)
+			return true
+		}
+	}
+	return false
+}
+
+// Detect command injection
+func detectCommandInjection(input string) bool {
+	cmdPatterns := []string{
+		`[;&|]\s*(ls|cat|wget|curl|nc|bash|sh|cmd|powershell)`,
+		`\$\(.*\)`,
+		`` + "`" + `.*` + "`" + ``,
+		`>\s*/dev/`,
+	}
+	
+	for _, pattern := range cmdPatterns {
+		matched, _ := regexp.MatchString(pattern, input)
+		if matched {
+			log.Printf("🚨 Command injection attempt detected: %s", input)
+			return true
+		}
+	}
+	return false
+}
+
+// Comprehensive security check
+func isSecurityThreat(input string) bool {
+	return detectSQLInjection(input) || 
+	       detectXSS(input) || 
+	       detectPathTraversal(input) || 
+	       detectCommandInjection(input)
+}
+
+// Hash sensitive data
+func hashData(data string) string {
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
+// Validate file upload
+func isValidFileUpload(filename string, fileSize int64) error {
+	// Check file extension
+	allowedExts := []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}
+	ext := strings.ToLower(filepath.Ext(filename))
+	
+	isAllowed := false
+	for _, allowedExt := range allowedExts {
+		if ext == allowedExt {
+			isAllowed = true
+			break
+		}
+	}
+	
+	if !isAllowed {
+		return fmt.Errorf("file type not allowed")
+	}
+	
+	// Check file size (max 5MB)
+	if fileSize > 5*1024*1024 {
+		return fmt.Errorf("file size exceeds 5MB limit")
+	}
+	
+	// Check for double extensions (e.g., file.php.jpg)
+	if strings.Count(filename, ".") > 1 {
+		return fmt.Errorf("suspicious filename detected")
+	}
+	
+	return nil
 }
 
 // Resolve public directory for uploads both in local dev and Docker/production
@@ -523,17 +844,165 @@ func main() {
 		AppName: "SCAFF*FOOD API",
 	})
 
-	// Middleware
-	app.Use(logger.New())
-	app.Use(cors.New(cors.Config{
-		// Allow all origins for frontend (localhost:3000, Netlify, etc.)
-		AllowOrigins: "*",
-		// Include custom header used by frontend to bypass ngrok warning
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization, ngrok-skip-browser-warning",
-		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-		// We don't use cookies/credentials from browser
-		AllowCredentials: false,
+	// ==================== SECURITY MIDDLEWARE ====================
+	
+	// Panic recovery - prevent crashes
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
 	}))
+	
+	// Request ID for tracking
+	app.Use(requestid.New())
+	
+	// Compression for performance
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+	
+	// IP Blacklist check - DDoS protection
+	app.Use(func(c *fiber.Ctx) error {
+		ip := c.IP()
+		
+		if ipBlacklist.IsBlacklisted(ip) {
+			log.Printf("🚫 Blocked request from blacklisted IP: %s", ip)
+			return c.Status(403).JSON(fiber.Map{
+				"success": false,
+				"message": "Access denied",
+			})
+		}
+		
+		return c.Next()
+	})
+	
+	// Security headers - XSS, clickjacking, MIME sniffing protection
+	app.Use(helmet.New(helmet.Config{
+		XSSProtection:             "1; mode=block",
+		ContentTypeNosniff:        "nosniff",
+		XFrameOptions:             "SAMEORIGIN",
+		HSTSMaxAge:                31536000,
+		HSTSExcludeSubdomains:     false,
+		ContentSecurityPolicy:     "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https:;",
+		ReferrerPolicy:            "strict-origin-when-cross-origin",
+	}))
+	
+	// Add Permissions-Policy header manually (not supported in helmet config)
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		return c.Next()
+	})
+
+	// Rate limiting - Global (100 req/min per IP)
+	app.Use(limiter.New(limiter.Config{
+		Max:        100,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			ip := c.IP()
+			ipBlacklist.TrackAttempt(ip)
+			log.Printf("⚠️ Rate limit exceeded for IP: %s", ip)
+			return c.Status(429).JSON(fiber.Map{
+				"success": false,
+				"message": "Too many requests. Please try again later.",
+			})
+		},
+	}))
+	
+	// Stricter rate limiting for auth endpoints
+	authLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			ip := c.IP()
+			count := ipBlacklist.TrackAttempt(ip)
+			log.Printf("🚨 Auth rate limit exceeded for IP: %s (attempt %d)", ip, count)
+			return c.Status(429).JSON(fiber.Map{
+				"success": false,
+				"message": "Too many authentication attempts. Please try again later.",
+			})
+		},
+	})
+	
+	// Apply auth limiter to auth routes
+	app.Use("/api/auth/*", authLimiter)
+	
+	// Stricter rate limiting for order creation (prevent spam)
+	orderLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: 5 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			log.Printf("⚠️ Order creation rate limit exceeded for IP: %s", c.IP())
+			return c.Status(429).JSON(fiber.Map{
+				"success": false,
+				"message": "Too many orders. Please wait before creating another order.",
+			})
+		},
+	})
+	
+	app.Use("/api/orders", func(c *fiber.Ctx) error {
+		if c.Method() == "POST" {
+			return orderLimiter(c)
+		}
+		return c.Next()
+	})
+
+	// Request logging with security info
+	app.Use(logger.New(logger.Config{
+		Format: "[${time}] ${status} - ${method} ${path} | IP: ${ip} | UA: ${ua} | Latency: ${latency}\n",
+		TimeFormat: "2006-01-02 15:04:05",
+	}))
+	
+	// Input validation middleware - check for malicious patterns
+	app.Use(func(c *fiber.Ctx) error {
+		// Check URL path for threats
+		if isSecurityThreat(c.Path()) {
+			ip := c.IP()
+			ipBlacklist.Add(ip, 24*time.Hour)
+			log.Printf("🚨 Security threat detected in path from IP %s: %s", ip, c.Path())
+			return c.Status(403).JSON(fiber.Map{
+				"success": false,
+				"message": "Malicious request detected",
+			})
+		}
+		
+		// Check query parameters
+		c.Request().URI().QueryArgs().VisitAll(func(key, value []byte) {
+			if isSecurityThreat(string(value)) {
+				ip := c.IP()
+				ipBlacklist.Add(ip, 24*time.Hour)
+				log.Printf("🚨 Security threat detected in query param from IP %s", ip)
+			}
+		})
+		
+		return c.Next()
+	})
+	
+	// CORS middleware
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Request-ID, ngrok-skip-browser-warning",
+		AllowMethods:     "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+		AllowCredentials: false,
+		MaxAge:           86400,
+	}))
+	
+	// Start background cleanup task for expired blacklist entries
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		
+		for range ticker.C {
+			ipBlacklist.CleanExpired()
+			log.Println("🧹 Cleaned expired IP blacklist entries")
+		}
+	}()
 
 	// Static files for uploaded images (QRIS, product images, etc.)
 	publicDir := getPublicDir()
@@ -565,7 +1034,7 @@ func main() {
 		})
 	})
 
-	// Upload image endpoint
+	// Upload image endpoint with enhanced security
 	app.Post("/api/upload", func(c *fiber.Ctx) error {
 		// Get file from form
 		file, err := c.FormFile("image")
@@ -577,7 +1046,18 @@ func main() {
 			})
 		}
 
-		// Validate file type
+		// Security validation
+		if err := isValidFileUpload(file.Filename, file.Size); err != nil {
+			ip := c.IP()
+			ipBlacklist.TrackAttempt(ip)
+			log.Printf("🚨 Invalid file upload attempt from IP %s: %v", ip, err)
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": err.Error(),
+			})
+		}
+
+		// Additional check: validate file type
 		if !isImageFile(file.Filename) {
 			return c.Status(400).JSON(fiber.Map{
 				"success": false,
@@ -585,16 +1065,20 @@ func main() {
 			})
 		}
 
-		// Validate file size (max 5MB)
-		if file.Size > 5*1024*1024 {
-			return c.Status(400).JSON(fiber.Map{
+		// Sanitize filename to prevent path traversal
+		originalFilename := filepath.Base(file.Filename)
+		if detectPathTraversal(originalFilename) {
+			ip := c.IP()
+			ipBlacklist.Add(ip, 24*time.Hour)
+			log.Printf("🚨 Path traversal attempt in filename from IP %s: %s", ip, originalFilename)
+			return c.Status(403).JSON(fiber.Map{
 				"success": false,
-				"message": "File size must be less than 5MB",
+				"message": "Malicious filename detected",
 			})
 		}
 
-		// Generate unique filename
-		ext := filepath.Ext(file.Filename)
+		// Generate unique, safe filename
+		ext := filepath.Ext(originalFilename)
 		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), generateRandomString(8), ext)
 
 		// Resolve base public directory and ensure upload folder exists
@@ -622,7 +1106,7 @@ func main() {
 
 		// Return URL
 		imageURL := fmt.Sprintf("/produk/%s", filename)
-		log.Printf("Image uploaded successfully: %s", imageURL)
+		log.Printf("✅ Image uploaded successfully: %s (from IP: %s)", imageURL, c.IP())
 
 		return c.JSON(fiber.Map{
 			"success": true,
@@ -1533,6 +2017,31 @@ func main() {
 		log.Printf("✅ Parsed order data: %+v", requestData.Order)
 		log.Printf("✅ Parsed items: %+v", requestData.Items)
 
+		// Sanitize input data
+		sanitizeOrderData(&requestData.Order)
+		
+		// Validate order data
+		if err := validateOrderData(&requestData.Order); err != nil {
+			log.Printf("❌ Order validation failed: %v", err)
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": fmt.Sprintf("Validation error: %v", err),
+			})
+		}
+		
+		// Validate items
+		if len(requestData.Items) == 0 {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Order must contain at least one item",
+			})
+		}
+		
+		// Sanitize item data
+		for i := range requestData.Items {
+			requestData.Items[i].ProductName = sanitizeString(requestData.Items[i].ProductName)
+		}
+
 		// Generate order number
 		orderNumber := fmt.Sprintf("ORD-%s-%03d", time.Now().Format("20060102"), time.Now().Unix()%1000)
 		requestData.Order.OrderNumber = orderNumber
@@ -1623,6 +2132,32 @@ func main() {
 		})
 	})
 
+	// Get pending orders count (public endpoint for badge)
+	app.Get("/api/orders/pending-count", func(c *fiber.Ctx) error {
+		if DB == nil {
+			return c.Status(503).JSON(fiber.Map{
+				"success": false,
+				"message": "Database not connected",
+			})
+		}
+
+		var count int64
+		result := DB.Model(&Order{}).Where("order_status = ?", "pending").Count(&count)
+		
+		if result.Error != nil {
+			log.Printf("Error counting pending orders: %v", result.Error)
+			return c.Status(500).JSON(fiber.Map{
+				"success": false,
+				"message": "Failed to count pending orders",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"count":   count,
+		})
+	})
+
 	// Get single order by ID
 	app.Get("/api/orders/:id", func(c *fiber.Ctx) error {
 		if DB == nil {
@@ -1633,6 +2168,15 @@ func main() {
 		}
 
 		id := c.Params("id")
+		
+		// Input validation - check UUID format
+		if len(id) != 36 {
+			return c.Status(400).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid order ID format",
+			})
+		}
+		
 		var order Order
 		
 		if err := DB.First(&order, "id = ?", id).Error; err != nil {
